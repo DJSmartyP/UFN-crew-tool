@@ -1,0 +1,20 @@
+UFN CREW DEPLOYMENT — INSTALL
+
+1. Create a new GitHub repository.
+2. Upload ALL files/folders from this package to the repository root.
+3. GitHub: Settings > Pages > Deploy from a branch > main / root.
+4. Firebase Console > Firestore Database > Rules.
+5. Replace the current rules with the included firestore.rules and Publish.
+   (This file contains the existing IDP rules PLUS the new UFN rules.)
+6. Firebase Authentication > Sign-in method:
+   - Google: Enabled
+   - Anonymous: Enabled
+7. Firebase Authentication > Settings > Authorised domains:
+   add your new GitHub Pages hostname if required.
+8. Open the GitHub Pages URL.
+
+IMPORTANT
+- Uses the existing free Firebase Spark project.
+- Uses separate collection: ufnDeployments.
+- No Cloud Functions / billing required.
+- Organiser access is restricted to the ADMIN_UID in firebase-config.js and firestore.rules.
