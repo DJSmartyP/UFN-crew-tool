@@ -62,3 +62,11 @@ These appear prominently in desktop ship panels. Compact round insignia remain i
 - Faction poster artwork is retained as a subtle card texture; compact faction insignia are used for primary identification.
 - New clean PNG assets: `assets/site-background.png` and `assets/bar-background.png`.
 - `firestore.rules` is the corrected combined ruleset preserving both the main IDP and UFN systems.
+
+
+## September layout refinement
+- Full approved UFN/Ghost identity tiles now sit above each ship crew box.
+- Duplicate faction artwork at the top edge of ship boxes has been removed; the subtle lower-right watermark remains.
+- Deployment name/date now live inside the branded deployment bar.
+- Admin can permanently delete deployments, including their players and name claims, after two-step confirmation.
+- No Firestore rules change is required; existing admin delete permissions already cover this operation.

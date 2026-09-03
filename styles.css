@@ -627,3 +627,63 @@ body{
   .faction-badge{width:52px;height:52px}
   .faction-strap{font-size:7px;letter-spacing:.09em}
 }
+
+
+/* ========================================================================
+   Ship tile / deployment banner refinement
+   ======================================================================== */
+
+/* Mission identity now lives in the visual bar. */
+.deployment-visual-copy small{
+  display:block;
+  margin-top:4px;
+  color:#b7cee2;
+  font:600 15px "Rajdhani";
+  letter-spacing:.02em;
+}
+.compact-management-head,.compact-player-head{margin-top:-2px}
+.compact-management-head{align-items:center}
+
+/* Remove the duplicate artwork that previously appeared along the upper edge
+   of the ship card. The subtle lower-right faction watermark remains. */
+.ship-card:before{display:none!important}
+
+/* Use the approved full faction identity tiles above each ship box. */
+.ship-faction-tile-wrap{
+  width:100%;
+  min-height:150px;
+  max-height:220px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  background:linear-gradient(180deg,rgba(2,10,18,.98),rgba(4,18,30,.96));
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.ship-faction-tile{
+  display:block;
+  width:100%;
+  height:100%;
+  max-height:220px;
+  object-fit:contain;
+  object-position:center;
+}
+.station-grid.one .ship-faction-tile-wrap{min-height:180px;max-height:250px}
+.station-grid.one .ship-faction-tile{max-height:250px}
+
+/* Keep only the subtle logo watermark at bottom-right of the actual crew box. */
+.ship-card:after{
+  right:-42px;
+  bottom:-54px;
+  width:210px;
+  height:210px;
+  opacity:.055;
+}
+.ship-card.ghost:after{opacity:.08}
+
+@media(max-width:700px){
+  .ship-faction-tile-wrap{min-height:105px;max-height:140px}
+  .ship-faction-tile{max-height:140px}
+  .station-grid.one .ship-faction-tile-wrap{min-height:110px;max-height:150px}
+  .station-grid.one .ship-faction-tile{max-height:150px}
+  .deployment-visual-copy small{font-size:13px}
+}
