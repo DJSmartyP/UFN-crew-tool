@@ -514,3 +514,50 @@ body{
   .faction-badge{width:48px;height:48px}
   .ship-head{min-height:72px}
 }
+
+
+/* Full faction identity tiles, using the previously-approved artwork. */
+.ship-faction-identity{
+  display:grid;
+  grid-template-columns:150px minmax(0,1fr);
+  min-height:188px;
+  border-bottom:1px solid rgba(255,255,255,.055);
+  background:rgba(3,13,24,.34);
+}
+.faction-tile{
+  width:150px;
+  height:188px;
+  object-fit:cover;
+  object-position:center;
+  display:block;
+  border-right:1px solid rgba(255,255,255,.08);
+  filter:saturate(.94) contrast(1.03);
+}
+.ship-card:not(.ghost) .faction-tile{
+  box-shadow:inset -10px 0 28px rgba(226,177,65,.08);
+}
+.ship-card.ghost .faction-tile{
+  box-shadow:inset -10px 0 28px rgba(87,217,145,.08);
+}
+.ship-faction-identity .ship-head{
+  min-height:188px;
+  border:0;
+  align-items:center;
+}
+.ship-faction-identity .ship-title{
+  font-size:clamp(17px,2.1vw,25px);
+}
+
+/* On small screens use the compact round insignia and hide the tall poster tile. */
+@media(max-width:700px){
+  .ship-faction-identity{
+    grid-template-columns:1fr;
+    min-height:0;
+  }
+  .faction-tile{
+    display:none;
+  }
+  .ship-faction-identity .ship-head{
+    min-height:72px;
+  }
+}

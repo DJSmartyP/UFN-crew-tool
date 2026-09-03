@@ -45,3 +45,10 @@ This build includes:
 - `assets/ghost-faction.webp` – Ghost ship/faction badge from supplied art
 
 Faction artwork is used in the live ship roster and in deployment headers. IDP remains the service brand; UFN/Ghosts are the operational crews.
+
+## Faction identity tiles
+The previously-approved full faction artwork is now included as:
+- `assets/ufn-faction-tile.webp` — UFN with “DISCIPLINE • HONOUR • VICTORY”
+- `assets/ghost-faction-tile.webp` — Ghosts with “ADAPT • INFILTRATE • DESTROY”
+
+These appear prominently in desktop ship panels. Compact round insignia remain in use on smaller/mobile layouts.
