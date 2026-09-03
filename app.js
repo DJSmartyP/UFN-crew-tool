@@ -140,10 +140,9 @@ function renderRoster(plan,d,admin=false){
   return `<div class="station-grid${ships.length===1?' one':''}">${ships.map(ship=>{
     const faction=ship.id==='ghosts'?'ghost':'';
     const badge=ship.id==='ghosts'?'assets/ghost-faction.png':'assets/ufn-faction.png';
-    const tile=ship.id==='ghosts'?'assets/ghost-faction-tile.png':'assets/ufn-faction-tile.png';
     const strap=ship.id==='ghosts'?'ADAPT • INFILTRATE • DESTROY':'DISCIPLINE • HONOUR • VICTORY';
     const map=new Map(plan.assignments.filter(a=>a.shipId===ship.id).map(a=>[a.role,a]));
-    return `<section class="ship-card ${faction}"><div class="ship-faction-tile-wrap"><img class="ship-faction-tile" src="${tile}" alt="${esc(ship.faction)} faction identity"></div><div class="ship-brand"><img class="faction-badge" src="${badge}" alt="${esc(ship.faction)} insignia"><div class="ship-brand-copy"><div class="eyebrow">${ship.faction} crew</div><div class="ship-title">${esc(ship.name)}</div><div class="faction-strap">${strap}</div></div><span class="pill ${ship.id==='ghosts'?'ghost':'ufn'}">${[...map.values()].length}/6 crew</span></div>${ROLES.map(r=>{const a=map.get(r.name);return `<div class="station ${roleClass(r.name)}"><div class="station-role">${r.name}</div><div class="station-name">${a?esc(a.name):'<span class="sub">To be decided</span>'}</div>${admin&&a?`<div class="station-note">${esc(a.quality.label)}${a.shipMet?'':' · different ship preference'}${a.forced?' · organiser fixed':''}</div>`:''}</div>`}).join('')}</section>`;
+    return `<section class="ship-card ${faction}"><div class="ship-brand"><img class="faction-badge" src="${badge}" alt="${esc(ship.faction)} insignia"><div class="ship-brand-copy"><div class="eyebrow">${ship.faction} crew</div><div class="ship-title">${esc(ship.name)}</div><div class="faction-strap">${strap}</div></div><span class="pill ${ship.id==='ghosts'?'ghost':'ufn'}">${[...map.values()].length}/6 crew</span></div>${ROLES.map(r=>{const a=map.get(r.name);return `<div class="station ${roleClass(r.name)}"><div class="station-role">${r.name}</div><div class="station-name">${a?esc(a.name):'<span class="sub">To be decided</span>'}</div>${admin&&a?`<div class="station-note">${esc(a.quality.label)}${a.shipMet?'':' · different ship preference'}${a.forced?' · organiser fixed':''}</div>`:''}</div>`}).join('')}</section>`;
   }).join('')}</div>${plan.error?`<div class="message error">${esc(plan.error)}</div>`:''}`;
 }
 
@@ -319,19 +318,15 @@ async function generateUfnCrewPdf(){
     const {jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4',compress:true});
 
-    const [bannerData,ufnData,ghostData,ufnTileData,ghostTileData]=await Promise.all([
+    const [bannerData,ufnData,ghostData]=await Promise.all([
       pdfFetchImageData('./assets/idp-banner.png'),
       pdfFetchImageData('./assets/ufn-faction.png'),
-      pdfFetchImageData('./assets/ghost-faction.png'),
-      pdfFetchImageData('./assets/ufn-faction-tile.png'),
-      pdfFetchImageData('./assets/ghost-faction-tile.png')
+      pdfFetchImageData('./assets/ghost-faction.png')
     ]);
-    const [bannerImg,ufnImg,ghostImg,ufnTileImg,ghostTileImg]=await Promise.all([
+    const [bannerImg,ufnImg,ghostImg]=await Promise.all([
       pdfLoadCanvasImage(bannerData).catch(()=>null),
       pdfLoadCanvasImage(ufnData).catch(()=>null),
-      pdfLoadCanvasImage(ghostData).catch(()=>null),
-      pdfLoadCanvasImage(ufnTileData).catch(()=>null),
-      pdfLoadCanvasImage(ghostTileData).catch(()=>null)
+      pdfLoadCanvasImage(ghostData).catch(()=>null)
     ]);
 
     // A4 landscape around 190 dpi.
@@ -414,18 +409,9 @@ async function generateUfnCrewPdf(){
       const factionAccent=ghost?'#55D991':'#E9B949';
       const factionName=ghost?'GHOSTS':'UNITED FEDERATED NAVY';
       const factionImg=ghost?ghostImg:ufnImg;
-      const tileImg=ghost?ghostTileImg:ufnTileImg;
       const map=assignmentMaps.get(ship.id);
 
       pdfFillRoundRect(ctx,x,y,w,h,X(1.6),'#FFFFFF','#CDD9E2',2.2);
-
-      // Very light faction tile watermark - visual only, no baked-in text relied upon.
-      if(tileImg){
-        ctx.save();
-        ctx.globalAlpha=.035;
-        pdfDrawImageCover(ctx,tileImg,x+w-X(47),y+Y(8),X(42),Y(55),1);
-        ctx.restore();
-      }
 
       // Ship header.
       const sh=Y(31);

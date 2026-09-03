@@ -82,3 +82,11 @@ The organiser crew-management screen now includes **Download crew PDF**.
 - Empty stations are shown as `To be decided`.
 - Uses the IDP masthead and the appropriate UFN/Ghost faction insignia.
 - The PDF contains assignments only; player preference/dislike data is not included.
+
+
+## Final faction-card refinement
+- Full UFN/Ghost poster tiles have been removed from the live ship cards.
+- Compact faction insignia remain in the ship header.
+- The subtle faction logo watermark remains at the bottom-right of each ship card.
+- The deployment/mission-details bar uses `assets/bar-background.png` as its dedicated background artwork.
+- PDF export uses compact faction logos rather than the poster tiles.
