@@ -352,3 +352,165 @@ body:before{opacity:.18}
   font-size:17px;
   line-height:1.45;
 }
+
+
+/* ==========================================================================
+   Asset-rich IDP × UFN co-brand layer
+   ========================================================================== */
+
+body{
+  background:
+    linear-gradient(180deg,rgba(3,12,24,.80),rgba(2,9,17,.96) 460px),
+    url("assets/idp-fleet-hero.webp") center top / 100% auto no-repeat,
+    linear-gradient(180deg,#07152a,#020812);
+}
+
+/* Keep the IDP service masthead visibly distinct from UFN terminal UI. */
+.topbar{
+  background:
+    linear-gradient(100deg,rgba(5,20,39,.97),rgba(8,35,62,.91)),
+    url("assets/idp-fleet-hero.webp") center 35% / cover no-repeat;
+  border-left:5px solid #ff8a1f;
+}
+.topbar:before{
+  content:"";
+  position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(4,15,29,.93),rgba(4,18,34,.72) 52%,rgba(7,27,48,.58));
+  pointer-events:none;
+}
+.topbar>*{position:relative;z-index:1}
+
+/* Deployment-specific art strip. */
+.deployment-visual-banner{
+  min-height:132px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+  padding:20px 26px;
+  margin:0 0 14px;
+  overflow:hidden;
+  position:relative;
+  border:1px solid rgba(91,169,244,.32);
+  border-left:4px solid #ff8a1f;
+  border-radius:18px;
+  background:
+    linear-gradient(90deg,rgba(4,17,33,.97),rgba(4,20,38,.78) 54%,rgba(4,18,34,.36)),
+    url("assets/idp-fleet-hero.webp") center 53% / cover no-repeat;
+  box-shadow:0 18px 40px rgba(0,0,0,.22);
+}
+.deployment-visual-banner:after{
+  content:"";position:absolute;left:0;bottom:0;width:46%;height:2px;
+  background:linear-gradient(90deg,#ff8a1f,#58a8ff,transparent);
+}
+.deployment-visual-copy{position:relative;z-index:1;display:grid;gap:5px}
+.deployment-visual-copy span{
+  color:#ffad57;
+  font:700 9px "Orbitron";
+  letter-spacing:.16em;
+  text-transform:uppercase;
+}
+.deployment-visual-copy b{
+  color:#f7fbff;
+  font:700 clamp(17px,2.4vw,29px) "Orbitron";
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.deployment-factions{
+  position:relative;z-index:1;
+  display:flex;align-items:center;gap:9px;
+}
+.deployment-factions img{
+  width:78px;height:78px;object-fit:cover;border-radius:50%;
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 0 18px rgba(74,155,239,.16);
+}
+.deployment-factions span{
+  color:#d8e8f7;font:700 18px "Orbitron";
+}
+
+/* Real faction artwork in crew panels. */
+.ship-head{
+  min-height:88px;
+  position:relative;
+  overflow:hidden;
+  padding:11px 13px;
+}
+.ship-head:after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,transparent 50%,rgba(255,255,255,.018));
+}
+.ship-identity{
+  display:flex;align-items:center;gap:12px;min-width:0;
+  position:relative;z-index:1;
+}
+.faction-badge{
+  width:62px;height:62px;object-fit:cover;border-radius:50%;flex:0 0 auto;
+  border:1px solid rgba(216,171,61,.38);
+  box-shadow:0 0 15px rgba(76,157,240,.18);
+}
+.ship-card.ghost .faction-badge{
+  border-color:rgba(87,217,145,.42);
+  box-shadow:0 0 17px rgba(87,217,145,.18);
+}
+.ship-card{
+  position:relative;
+  box-shadow:0 14px 30px rgba(0,0,0,.18);
+}
+.ship-card:after{
+  content:"";
+  position:absolute;
+  right:-44px;
+  bottom:-58px;
+  width:220px;
+  height:220px;
+  border-radius:50%;
+  opacity:.045;
+  background:url("assets/ufn-faction.webp") center/cover;
+  pointer-events:none;
+}
+.ship-card.ghost:after{
+  background-image:url("assets/ghost-faction.webp");
+  opacity:.075;
+}
+
+/* Make faction differentiation intentional rather than UFN-terminal mimicry. */
+.ship-card:not(.ghost){
+  border-color:rgba(226,177,65,.30);
+  background:linear-gradient(180deg,rgba(9,30,52,.96),rgba(5,17,30,.98));
+}
+.ship-card:not(.ghost) .ship-head{
+  background:linear-gradient(100deg,rgba(32,61,89,.96),rgba(8,29,50,.95));
+}
+.ship-card.ghost{
+  border-color:rgba(87,217,145,.32);
+  background:linear-gradient(180deg,rgba(6,34,29,.94),rgba(4,19,20,.98));
+}
+.ship-card.ghost .ship-head{
+  background:linear-gradient(100deg,rgba(11,67,52,.92),rgba(5,34,29,.95));
+}
+
+/* Player form also feels like the independent IDP service. */
+.grid.two > aside > .panel:first-child,
+.response-editor,
+.modal{
+  box-shadow:0 16px 36px rgba(0,0,0,.18);
+}
+.btn.primary{
+  background:linear-gradient(180deg,#ffad55,#f07b16);
+  border-color:#ffb866;
+  color:#142439;
+  box-shadow:0 5px 14px rgba(240,123,22,.14);
+}
+.panel:before{
+  background:linear-gradient(90deg,#ff8a1f,#58a8ff);
+}
+
+@media(max-width:700px){
+  body{background-size:auto,auto,auto}
+  .deployment-visual-banner{min-height:104px;padding:14px 16px}
+  .deployment-visual-copy b{font-size:15px}
+  .deployment-factions img{width:56px;height:56px}
+  .faction-badge{width:48px;height:48px}
+  .ship-head{min-height:72px}
+}

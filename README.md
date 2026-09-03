@@ -37,3 +37,11 @@ This version presents Interstellar Deployment Planner as the service provider an
 
 ## Direct player access
 Players are expected to use deployment-specific links (`?m=...`) and therefore bypass the root screen entirely. The root URL is now a compact administrator-only Google sign-in entry point.
+
+## Visual asset integration
+This build includes:
+- `assets/idp-fleet-hero.webp` – artwork crop from the approved IDP co-brand concept
+- `assets/ufn-faction.webp` – UFN ship/faction badge from supplied art
+- `assets/ghost-faction.webp` – Ghost ship/faction badge from supplied art
+
+Faction artwork is used in the live ship roster and in deployment headers. IDP remains the service brand; UFN/Ghosts are the operational crews.
