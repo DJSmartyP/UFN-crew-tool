@@ -86,7 +86,23 @@ async function boot(){
   onAuthStateChanged(auth,user=>{currentUser=user;if(!user){renderLogin();return;}if(user.uid!==ADMIN_UID){renderWrongAccount();return;}renderTop();renderDashboard();});
 }
 function renderTop(){topActions.innerHTML=`<span class="pill ufn">UFN organiser</span><button id="logout" class="btn ghost tiny">Sign out</button>`;$('#logout').onclick=()=>signOut(auth);}
-function renderLogin(){topActions.innerHTML='';main.innerHTML=`<section class="grid two"><div><div class="eyebrow">UFN deployment services</div><div class="page-head"><div><h1>Crew Deployment</h1><p class="sub">Interstellar Deployment Planner, configured for United Federated Navy operations.</p></div></div><section class="panel"><h2>Organiser access</h2><p class="sub">This UFN integration accepts a single authorised organiser account.</p><div class="actions"><button id="googleLogin" class="btn primary">Continue with Google</button></div><div id="loginMessage" class="message"></div></section></div><section class="panel"><div class="eyebrow">Integrated configuration</div><h2>UFN crew model</h2><p class="sub">One UFN ship, or a joint two-ship deployment with a Ghost vessel. Six fixed bridge stations per ship.</p><div class="rules"><div class="rule"><span class="rule-num">6</span><span>Captain, Helm, Weapons, Engineering, Science and Relay.</span></div><div class="rule"><span class="rule-num">1</span><span>One ship = UFN, maximum 6 players.</span></div><div class="rule"><span class="rule-num">2</span><span>Two ships = UFN + Ghosts, maximum 12 players.</span></div></div></section></section>`;$('#googleLogin').onclick=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider())}catch(e){msg($('#loginMessage'),e.message,'error')}};}
+function renderLogin(){
+  topActions.innerHTML='';
+  main.innerHTML=`
+    <section class="admin-entry-shell">
+      <div class="admin-entry-card">
+        <div class="eyebrow idp-eyebrow">UFN DEPLOYMENT ADMINISTRATION</div>
+        <h1>Administrator access</h1>
+        <p>This console is restricted to the authorised UFN deployment organiser.</p>
+        <button id="googleLogin" class="btn admin-google">Continue with Google</button>
+        <div id="loginMessage" class="message"></div>
+      </div>
+    </section>`;
+  $('#googleLogin').onclick=async()=>{
+    try{await signInWithPopup(auth,new GoogleAuthProvider())}
+    catch(e){msg($('#loginMessage'),e.message,'error')}
+  };
+}
 function renderWrongAccount(){topActions.innerHTML='';main.innerHTML=`<section class="empty-state"><h2>Account not authorised</h2><p>This UFN integration is restricted to the designated organiser account.</p><div class="actions" style="justify-content:center"><button id="wrongLogout" class="btn ghost">Sign out</button></div></section>`;$('#wrongLogout').onclick=()=>signOut(auth);}
 
 async function renderDashboard(){clearUnsubs();main.innerHTML=`<div class="page-head"><div><div class="eyebrow">UFN organiser dashboard</div><h1>Deployments</h1><p class="sub">Create a deployment, share its player link, then manage the live crew suggestion.</p></div><button id="createDeployment" class="btn primary">Create deployment</button></div><div id="deployments" class="grid cards"><section class="loading-card"><div class="scanner"></div><p>Loading deployments…</p></section></div>`;$('#createDeployment').onclick=()=>openDeploymentModal();const q=query(collection(db,'ufnDeployments'),orderBy('date','desc'));unsubs.push(onSnapshot(q,snap=>{const ds=snap.docs.map(x=>({id:x.id,...x.data()}));$('#deployments').innerHTML=ds.length?ds.map(renderDeploymentCard).join(''):`<section class="empty-state"><h2>No deployments yet</h2><p>Create the first UFN crew deployment.</p></section>`;ds.forEach(d=>{document.querySelector(`[data-manage="${d.id}"]`)?.addEventListener('click',()=>manageDeployment(d.id));document.querySelector(`[data-copy="${d.id}"]`)?.addEventListener('click',()=>navigator.clipboard.writeText(playerUrl(d.id)));});}));}

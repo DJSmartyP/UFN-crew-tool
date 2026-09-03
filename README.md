@@ -29,3 +29,11 @@ Firebase Authentication must have:
 - your GitHub Pages domain listed as an authorised domain
 
 No Cloud Functions are used and this build does not require the Blaze plan.
+
+
+## Co-branded visual build
+This version presents Interstellar Deployment Planner as the service provider and the United Federated Navy as the client. The organiser login is intentionally hidden under Administrator access on the public landing page.
+
+
+## Direct player access
+Players are expected to use deployment-specific links (`?m=...`) and therefore bypass the root screen entirely. The root URL is now a compact administrator-only Google sign-in entry point.
