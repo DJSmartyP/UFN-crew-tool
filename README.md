@@ -90,3 +90,10 @@ The organiser crew-management screen now includes **Download crew PDF**.
 - The subtle faction logo watermark remains at the bottom-right of each ship card.
 - The deployment/mission-details bar uses `assets/bar-background.png` as its dedicated background artwork.
 - PDF export uses compact faction logos rather than the poster tiles.
+
+
+## Masthead and deployment-bar refinement
+- Organiser badge and sign-out controls are now outside the masthead.
+- Player pages have no empty utility row.
+- The masthead is materially shorter.
+- The existing `assets/bar-background.png` is now deliberately visible behind deployment name/date details rather than being hidden by a heavy dark overlay.
