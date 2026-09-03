@@ -193,8 +193,309 @@ function openDeploymentModal(existing=null){
   $('#deploymentForm').onsubmit=async e=>{e.preventDefault();const shipCount=Number($('#shipCount').value);const data={title:$('#depTitle').value.trim(),date:$('#depDate').value,shipCount,ufnShipName:$('#ufnShip').value.trim()||(shipCount===2?DEFAULT_DUAL_UFN:DEFAULT_SINGLE_UFN),ghostShipName:shipCount===2?($('#ghostShip').value.trim()||DEFAULT_DUAL_GHOST):'',closed:existing?.closed||false,overrides:existing?.overrides||{},responseCount:Number(existing?.responseCount||0),updatedAt:serverTimestamp(),createdAt:existing?.createdAt||serverTimestamp()};try{if(existing)await setDoc(doc(db,'ufnDeployments',existing.id),data,{merge:true});else await addDoc(collection(db,'ufnDeployments'),data);wrap.remove()}catch(err){msg($('#depMessage'),err.message,'error')}};
 }
 
-async function manageDeployment(id){clearUnsubs();const ref=doc(db,'ufnDeployments',id),snap=await getDoc(ref);if(!snap.exists()){renderDashboard();return;}activeDeployment={id,...snap.data()};players=[];main.innerHTML=`<div class="deployment-visual-banner"><div class="deployment-visual-copy"><span>Interstellar Deployment Planner · UFN Deployment Services</span><b>${esc(activeDeployment.title)}</b><small>${esc(dateText(activeDeployment.date))}</small></div><div class="deployment-factions"><img src="assets/ufn-faction.png" alt="UFN">${activeDeployment.shipCount===2?'<span>+</span><img src="assets/ghost-faction.png" alt="Ghosts">':''}</div></div><div class="page-head compact-management-head"><div><button id="backDash" class="btn ghost tiny">← Dashboard</button><div class="eyebrow" style="margin-top:10px">Crew management</div></div><div class="actions"><button id="setupBtn" class="btn ghost">Deployment setup</button><button id="toggleClosed" class="btn ${activeDeployment.closed?'success':'danger'}">${activeDeployment.closed?'Open choices':'Close choices'}</button><button id="deleteDeployment" class="btn danger">Delete deployment</button></div></div><div class="grid two"><aside><section class="panel"><h2>Player link</h2><p class="sub">Share this link with everyone who should add preferences.</p><div class="share-box"><input id="manageLink" readonly value="${esc(playerUrl(id))}"><button id="copyManageLink" class="btn primary tiny">Copy link</button></div><div id="responseStats" class="mission-meta"></div></section><section class="panel" style="margin-top:14px"><h2>Responses</h2><div class="field"><label>Registered player</label><select id="playerSelect" class="select-player"><option value="">Select a player…</option></select></div><div id="responseEditor" class="response-editor"><div class="sub">Select a registered player to view or edit their preferences and organiser locks.</div></div></section></aside><section class="panel"><div class="eyebrow">Live suggestion</div><h2>Current crew plan</h2><p class="sub">Station preferences are prioritised globally. Organiser ship/station locks are hard constraints.</p><div id="roster"></div></section></div>`;
-  $('#backDash').onclick=()=>renderDashboard();$('#copyManageLink').onclick=()=>navigator.clipboard.writeText(playerUrl(id));$('#setupBtn').onclick=()=>openDeploymentModal(activeDeployment);$('#toggleClosed').onclick=async()=>updateDoc(ref,{closed:!activeDeployment.closed,updatedAt:serverTimestamp()});$('#deleteDeployment').onclick=()=>deleteDeploymentAdmin(activeDeployment);$('#playerSelect').onchange=()=>renderResponseEditor($('#playerSelect').value);
+
+function pdfSafeFilename(value){
+  return String(value||'')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g,'')
+    .replace(/\s+/g,'-')
+    .replace(/-+/g,'-')
+    .replace(/^-|-$/g,'')
+    .slice(0,80)||'UFN-Deployment';
+}
+function pdfBlobDataUrl(blob){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=reject;
+    reader.readAsDataURL(blob);
+  });
+}
+async function pdfFetchImageData(url){
+  try{
+    const res=await fetch(url,{cache:'force-cache'});
+    if(!res.ok)return null;
+    return await pdfBlobDataUrl(await res.blob());
+  }catch{return null;}
+}
+function pdfLoadCanvasImage(dataUrl){
+  return new Promise((resolve,reject)=>{
+    if(!dataUrl){resolve(null);return;}
+    const img=new Image();
+    img.onload=()=>resolve(img);
+    img.onerror=()=>reject(new Error('Image could not be loaded'));
+    img.src=dataUrl;
+  });
+}
+function pdfRoundRectPath(ctx,x,y,w,h,r){
+  const rr=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y);
+  ctx.arcTo(x+w,y,x+w,y+h,rr);
+  ctx.arcTo(x+w,y+h,x,y+h,rr);
+  ctx.arcTo(x,y+h,x,y,rr);
+  ctx.arcTo(x,y,x+w,y,rr);
+  ctx.closePath();
+}
+function pdfFillRoundRect(ctx,x,y,w,h,r,fill,stroke=null,lineWidth=1){
+  pdfRoundRectPath(ctx,x,y,w,h,r);
+  if(fill){ctx.fillStyle=fill;ctx.fill();}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lineWidth;ctx.stroke();}
+}
+function pdfSetFont(ctx,size,weight='600',family='Rajdhani'){
+  ctx.font=`${weight} ${size}px "${family}", sans-serif`;
+}
+function pdfFitText(ctx,text,maxWidth,startSize,minSize,weight='700',family='Orbitron'){
+  let size=startSize;
+  const value=String(text??'');
+  while(size>minSize){
+    pdfSetFont(ctx,size,weight,family);
+    if(ctx.measureText(value).width<=maxWidth)break;
+    size-=1;
+  }
+  return size;
+}
+function pdfText(ctx,text,x,y,{size=30,weight='600',family='Orbitron',colour='#102334',align='left',baseline='alphabetic',maxWidth=null}={}){
+  pdfSetFont(ctx,size,weight,family);
+  ctx.fillStyle=colour;
+  ctx.textAlign=align;
+  ctx.textBaseline=baseline;
+  if(maxWidth)ctx.fillText(String(text??''),x,y,maxWidth);
+  else ctx.fillText(String(text??''),x,y);
+}
+function pdfRolePalette(role){
+  const map={
+    Captain:{accent:'#E9B949',soft:'#FFF6D8',text:'#2F2307'},
+    Helm:{accent:'#4AA7FF',soft:'#E8F4FF',text:'#082744'},
+    Weapons:{accent:'#E85A66',soft:'#FDEBED',text:'#411117'},
+    Engineering:{accent:'#F2994A',soft:'#FFF0E1',text:'#43210B'},
+    Science:{accent:'#59C98A',soft:'#E8F8EF',text:'#0C3421'},
+    Relay:{accent:'#A77BEA',soft:'#F2EBFD',text:'#291449'}
+  };
+  return map[role]||{accent:'#7895AA',soft:'#EDF3F6',text:'#152738'};
+}
+function pdfDrawImageCover(ctx,img,x,y,w,h,alpha=1){
+  if(!img)return;
+  const ratio=Math.max(w/img.width,h/img.height);
+  const dw=img.width*ratio,dh=img.height*ratio;
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+  ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh);
+  ctx.restore();
+}
+function pdfAssignmentMap(plan,shipId){
+  return new Map((plan.assignments||[]).filter(a=>a.shipId===shipId).map(a=>[a.role,a]));
+}
+async function generateUfnCrewPdf(){
+  const button=$('#downloadCrewPdf');
+  const message=$('#manageMessage');
+  if(!activeDeployment)return;
+  if(!window.jspdf?.jsPDF){
+    msg(message,'PDF generator did not load. Refresh the page and try again.','error');
+    return;
+  }
+
+  const oldText=button?.textContent||'Download crew PDF';
+  if(button){button.disabled=true;button.textContent='Generating PDF…';}
+  msg(message,'Creating crew manifest…');
+
+  try{
+    if(document.fonts?.ready){
+      await document.fonts.ready;
+      await Promise.allSettled([
+        document.fonts.load('800 42px Orbitron'),
+        document.fonts.load('700 32px Orbitron'),
+        document.fonts.load('700 28px Rajdhani')
+      ]);
+    }
+
+    const plan=computePlan(players,activeDeployment);
+    if(plan.error){
+      msg(message,`PDF not generated: ${plan.error}`,'error');
+      return;
+    }
+
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4',compress:true});
+
+    const [bannerData,ufnData,ghostData,ufnTileData,ghostTileData]=await Promise.all([
+      pdfFetchImageData('./assets/idp-banner.png'),
+      pdfFetchImageData('./assets/ufn-faction.png'),
+      pdfFetchImageData('./assets/ghost-faction.png'),
+      pdfFetchImageData('./assets/ufn-faction-tile.png'),
+      pdfFetchImageData('./assets/ghost-faction-tile.png')
+    ]);
+    const [bannerImg,ufnImg,ghostImg,ufnTileImg,ghostTileImg]=await Promise.all([
+      pdfLoadCanvasImage(bannerData).catch(()=>null),
+      pdfLoadCanvasImage(ufnData).catch(()=>null),
+      pdfLoadCanvasImage(ghostData).catch(()=>null),
+      pdfLoadCanvasImage(ufnTileData).catch(()=>null),
+      pdfLoadCanvasImage(ghostTileData).catch(()=>null)
+    ]);
+
+    // A4 landscape around 190 dpi.
+    const W=2245,H=1588;
+    const sx=W/297,sy=H/210;
+    const X=mm=>mm*sx,Y=mm=>mm*sy;
+    const canvas=document.createElement('canvas');
+    canvas.width=W;canvas.height=H;
+    const ctx=canvas.getContext('2d',{alpha:false});
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality='high';
+
+    // Paper and subtle technical decoration.
+    ctx.fillStyle='#F4F8FA';ctx.fillRect(0,0,W,H);
+    const wash=ctx.createLinearGradient(0,0,W,H);
+    wash.addColorStop(0,'rgba(54,154,224,.055)');
+    wash.addColorStop(.5,'rgba(255,255,255,0)');
+    wash.addColorStop(1,'rgba(232,185,73,.055)');
+    ctx.fillStyle=wash;ctx.fillRect(0,0,W,H);
+
+    // Dark IDP masthead.
+    const headerH=Y(45);
+    const head=ctx.createLinearGradient(0,0,W,headerH);
+    head.addColorStop(0,'#020A12');
+    head.addColorStop(.58,'#08233C');
+    head.addColorStop(1,'#0B3152');
+    ctx.fillStyle=head;ctx.fillRect(0,0,W,headerH);
+    ctx.fillStyle='#FF8A1F';ctx.fillRect(0,0,X(1.7),headerH);
+    ctx.fillStyle='#58A8FF';ctx.fillRect(X(1.7),0,X(.5),headerH);
+
+    // Branded banner.
+    if(bannerImg){
+      const maxW=X(112),maxH=Y(27);
+      const ratio=Math.min(maxW/bannerImg.width,maxH/bannerImg.height);
+      ctx.drawImage(bannerImg,X(10),Y(5.5),bannerImg.width*ratio,bannerImg.height*ratio);
+    }else{
+      pdfText(ctx,'INTERSTELLAR',X(11),Y(15),{size:72,weight:'800',colour:'#FFFFFF'});
+      pdfText(ctx,'DEPLOYMENT PLANNER',X(11),Y(25),{size:34,weight:'700',colour:'#58A8FF'});
+    }
+
+    // Deployment title and meta on right.
+    const title=String(activeDeployment.title||'UFN Deployment');
+    const titleSize=pdfFitText(ctx,title,X(118),48,27,'800','Orbitron');
+    pdfText(ctx,title,W-X(10),Y(15.5),{size:titleSize,weight:'800',colour:'#F7FBFE',align:'right'});
+    pdfText(ctx,dateText(activeDeployment.date).toUpperCase(),W-X(10),Y(24),{size:24,weight:'700',colour:'#A9C1D4',align:'right'});
+    pdfText(ctx,'CREW POSITIONS OPTIMISED BY INTERSTELLAR DEPLOYMENT PLANNER',W-X(10),Y(33),{size:20,weight:'800',colour:'#EFC76F',align:'right'});
+
+    // Meta rail.
+    const railY=Y(45),railH=Y(14);
+    ctx.fillStyle='#E8F0F5';ctx.fillRect(0,railY,W,railH);
+    ctx.strokeStyle='#CBD9E3';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,railY+railH);ctx.lineTo(W,railY+railH);ctx.stroke();
+    const ships=shipDefs(activeDeployment);
+    const shipNames=ships.map(s=>s.name).join(' + ');
+    const meta=[
+      {x:11,label:'DEPLOYMENT',value:title},
+      {x:112,label:'SHIPS',value:shipNames},
+      {x:227,label:'REGISTERED',value:`${players.length} / ${capFor(activeDeployment)}`},
+      {x:265,label:'CHOICES',value:activeDeployment.closed?'CLOSED':'OPEN'}
+    ];
+    for(const item of meta){
+      pdfText(ctx,item.label,X(item.x),railY+Y(5.0),{size:17,weight:'800',colour:'#718697'});
+      const max=item.label==='DEPLOYMENT'?X(90):item.label==='SHIPS'?X(105):X(28);
+      const size=pdfFitText(ctx,item.value,max,25,16,'700','Orbitron');
+      pdfText(ctx,item.value,X(item.x),railY+Y(10.7),{size,weight:'700',colour:item.label==='CHOICES'?(activeDeployment.closed?'#983F4D':'#287F58'):'#172531'});
+    }
+
+    // Ship cards.
+    const contentTop=Y(67),contentBottom=H-Y(17);
+    const outerMargin=X(10),gap=X(7);
+    const cardCount=ships.length;
+    const cardW=cardCount===1?W-(outerMargin*2):(W-(outerMargin*2)-gap)/2;
+    const cardXs=cardCount===1?[outerMargin]:[outerMargin,outerMargin+cardW+gap];
+    const cardH=contentBottom-contentTop;
+    const roleRows=ROLES.length;
+    const assignmentMaps=new Map(ships.map(s=>[s.id,pdfAssignmentMap(plan,s.id)]));
+
+    ships.forEach((ship,idx)=>{
+      const x=cardXs[idx],y=contentTop,w=cardW,h=cardH;
+      const ghost=ship.id==='ghosts';
+      const factionAccent=ghost?'#55D991':'#E9B949';
+      const factionName=ghost?'GHOSTS':'UNITED FEDERATED NAVY';
+      const factionImg=ghost?ghostImg:ufnImg;
+      const tileImg=ghost?ghostTileImg:ufnTileImg;
+      const map=assignmentMaps.get(ship.id);
+
+      pdfFillRoundRect(ctx,x,y,w,h,X(1.6),'#FFFFFF','#CDD9E2',2.2);
+
+      // Very light faction tile watermark - visual only, no baked-in text relied upon.
+      if(tileImg){
+        ctx.save();
+        ctx.globalAlpha=.035;
+        pdfDrawImageCover(ctx,tileImg,x+w-X(47),y+Y(8),X(42),Y(55),1);
+        ctx.restore();
+      }
+
+      // Ship header.
+      const sh=Y(31);
+      const grad=ctx.createLinearGradient(x,y,x+w,y+sh);
+      grad.addColorStop(0,ghost?'#0B3E33':'#12334F');
+      grad.addColorStop(1,ghost?'#061F1C':'#081C30');
+      ctx.fillStyle=grad;
+      pdfRoundRectPath(ctx,x,y,w,sh,X(1.5));ctx.fill();
+      ctx.fillStyle=factionAccent;ctx.fillRect(x,y,X(1.4),sh);
+
+      if(factionImg){
+        const sz=Y(22),cx=x+X(14),cy=y+sh/2;
+        ctx.save();ctx.beginPath();ctx.arc(cx,cy,sz/2,0,Math.PI*2);ctx.clip();
+        pdfDrawImageCover(ctx,factionImg,cx-sz/2,cy-sz/2,sz,sz,1);
+        ctx.restore();
+        ctx.beginPath();ctx.arc(cx,cy,sz/2+3,0,Math.PI*2);
+        ctx.strokeStyle=factionAccent;ctx.lineWidth=3;ctx.stroke();
+      }
+
+      const nameX=x+X(29);
+      pdfText(ctx,factionName,nameX,y+Y(9),{size:18,weight:'800',colour:ghost?'#78E6B0':'#F0CF77'});
+      const shipSize=pdfFitText(ctx,ship.name,w-X(62),36,22,'800','Orbitron');
+      pdfText(ctx,ship.name,nameX,y+Y(20),{size:shipSize,weight:'800',colour:'#FFFFFF'});
+      pdfText(ctx,`${map.size} / 6 CREW ASSIGNED`,x+w-X(8),y+Y(20),{size:18,weight:'800',colour:'#B8CBD9',align:'right'});
+
+      // Six station rows.
+      const rowsTop=y+sh+Y(5);
+      const available=h-sh-Y(12);
+      const rowGap=Y(2.3);
+      const rowH=(available-rowGap*(roleRows-1))/roleRows;
+
+      ROLES.forEach((role,i)=>{
+        const ry=rowsTop+i*(rowH+rowGap);
+        const p=pdfRolePalette(role.name);
+        const a=map.get(role.name);
+        pdfFillRoundRect(ctx,x+X(5),ry,w-X(10),rowH,X(1.0),a?'#FBFCFD':'#F1F5F7','#D8E2E9',1.5);
+        ctx.fillStyle=p.accent;ctx.fillRect(x+X(5),ry,X(1.1),rowH);
+
+        const roleSize=cardCount===1?31:26;
+        const nameSize=cardCount===1?34:30;
+        pdfText(ctx,role.name,x+X(10),ry+rowH/2,{size:roleSize,weight:'800',colour:p.text,baseline:'middle'});
+        const player=a?.name||'To be decided';
+        const maxName=w-X(66);
+        const fitted=pdfFitText(ctx,player,maxName,nameSize,18,'700','Orbitron');
+        pdfText(ctx,player,x+w-X(10),ry+rowH/2,{size:fitted,weight:a?'700':'600',colour:a?'#102334':'#8595A0',align:'right',baseline:'middle'});
+      });
+    });
+
+    // Footer.
+    const footerY=H-Y(11);
+    ctx.strokeStyle='#CBD8E1';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(outerMargin,footerY);ctx.lineTo(W-outerMargin,footerY);ctx.stroke();
+    const generated=new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short'}).format(new Date());
+    pdfText(ctx,'INTERSTELLAR DEPLOYMENT PLANNER // UFN CREW ASSIGNMENT SERVICE',outerMargin,H-Y(5.5),{size:17,weight:'800',colour:'#526C80'});
+    pdfText(ctx,`GENERATED ${generated.toUpperCase()}`,W-outerMargin,H-Y(5.5),{size:17,weight:'700',colour:'#718697',align:'right'});
+
+    const image=canvas.toDataURL('image/jpeg',.95);
+    pdf.addImage(image,'JPEG',0,0,297,210,undefined,'FAST');
+    pdf.save(`${pdfSafeFilename(activeDeployment.title)}_Crew-Manifest.pdf`);
+    msg(message,'Crew PDF downloaded.','ok');
+  }catch(err){
+    console.error('UFN PDF generation failed',err);
+    msg(message,`Could not generate PDF: ${err?.message||err}`,'error');
+  }finally{
+    if(button){button.disabled=false;button.textContent=oldText;}
+  }
+}
+
+
+async function manageDeployment(id){clearUnsubs();const ref=doc(db,'ufnDeployments',id),snap=await getDoc(ref);if(!snap.exists()){renderDashboard();return;}activeDeployment={id,...snap.data()};players=[];main.innerHTML=`<div class="deployment-visual-banner"><div class="deployment-visual-copy"><span>Interstellar Deployment Planner · UFN Deployment Services</span><b>${esc(activeDeployment.title)}</b><small>${esc(dateText(activeDeployment.date))}</small></div><div class="deployment-factions"><img src="assets/ufn-faction.png" alt="UFN">${activeDeployment.shipCount===2?'<span>+</span><img src="assets/ghost-faction.png" alt="Ghosts">':''}</div></div><div class="page-head compact-management-head"><div><button id="backDash" class="btn ghost tiny">← Dashboard</button><div class="eyebrow" style="margin-top:10px">Crew management</div></div><div class="actions"><button id="downloadCrewPdf" class="btn primary">Download crew PDF</button><button id="setupBtn" class="btn ghost">Deployment setup</button><button id="toggleClosed" class="btn ${activeDeployment.closed?'success':'danger'}">${activeDeployment.closed?'Open choices':'Close choices'}</button><button id="deleteDeployment" class="btn danger">Delete deployment</button></div></div><div class="grid two"><aside><section class="panel"><h2>Player link</h2><p class="sub">Share this link with everyone who should add preferences.</p><div class="share-box"><input id="manageLink" readonly value="${esc(playerUrl(id))}"><button id="copyManageLink" class="btn primary tiny">Copy link</button></div><div id="responseStats" class="mission-meta"></div><div id="manageMessage" class="message"></div></section><section class="panel" style="margin-top:14px"><h2>Responses</h2><div class="field"><label>Registered player</label><select id="playerSelect" class="select-player"><option value="">Select a player…</option></select></div><div id="responseEditor" class="response-editor"><div class="sub">Select a registered player to view or edit their preferences and organiser locks.</div></div></section></aside><section class="panel"><div class="eyebrow">Live suggestion</div><h2>Current crew plan</h2><p class="sub">Station preferences are prioritised globally. Organiser ship/station locks are hard constraints.</p><div id="roster"></div></section></div>`;
+  $('#backDash').onclick=()=>renderDashboard();$('#copyManageLink').onclick=()=>navigator.clipboard.writeText(playerUrl(id));$('#downloadCrewPdf').onclick=generateUfnCrewPdf;$('#setupBtn').onclick=()=>openDeploymentModal(activeDeployment);$('#toggleClosed').onclick=async()=>updateDoc(ref,{closed:!activeDeployment.closed,updatedAt:serverTimestamp()});$('#deleteDeployment').onclick=()=>deleteDeploymentAdmin(activeDeployment);$('#playerSelect').onchange=()=>renderResponseEditor($('#playerSelect').value);
   unsubs.push(onSnapshot(ref,s=>{if(!s.exists())return renderDashboard();activeDeployment={id,...s.data()};$('#toggleClosed').textContent=activeDeployment.closed?'Open choices':'Close choices';$('#toggleClosed').className=`btn ${activeDeployment.closed?'success':'danger'}`;refreshManage();}));
   unsubs.push(onSnapshot(collection(db,'ufnDeployments',id,'players'),snap=>{players=snap.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>String(a.name).localeCompare(String(b.name)));refreshManage();}));
 }

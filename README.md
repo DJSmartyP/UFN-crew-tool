@@ -70,3 +70,15 @@ These appear prominently in desktop ship panels. Compact round insignia remain i
 - Deployment name/date now live inside the branded deployment bar.
 - Admin can permanently delete deployments, including their players and name claims, after two-step confirmation.
 - No Firestore rules change is required; existing admin delete permissions already cover this operation.
+
+
+## Crew PDF export
+The organiser crew-management screen now includes **Download crew PDF**.
+
+- One A4 landscape page per deployment.
+- A single-ship deployment uses the full page width.
+- A two-ship deployment places UFN and Ghost crews side-by-side on the same page.
+- All six bridge stations are always shown.
+- Empty stations are shown as `To be decided`.
+- Uses the IDP masthead and the appropriate UFN/Ghost faction insignia.
+- The PDF contains assignments only; player preference/dislike data is not included.
