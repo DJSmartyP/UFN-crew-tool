@@ -52,3 +52,13 @@ The previously-approved full faction artwork is now included as:
 - `assets/ghost-faction-tile.webp` — Ghosts with “ADAPT • INFILTRATE • DESTROY”
 
 These appear prominently in desktop ship panels. Compact round insignia remain in use on smaller/mobile layouts.
+
+
+## September 2026 UFN update
+- Multiple players can register from the same browser/device using separate anonymous Firebase identities.
+- Choosing No preference / fill a gap automatically fills remaining ranked choices.
+- Default ship names: UFN Vanguard for one ship; UFN Celeste + GST Darkwater for two ships. All remain editable.
+- One-ship roster expands across the available plan area.
+- Faction poster artwork is retained as a subtle card texture; compact faction insignia are used for primary identification.
+- New clean PNG assets: `assets/site-background.png` and `assets/bar-background.png`.
+- `firestore.rules` is the corrected combined ruleset preserving both the main IDP and UFN systems.

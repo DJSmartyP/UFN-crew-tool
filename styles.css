@@ -561,3 +561,69 @@ body{
     min-height:72px;
   }
 }
+
+
+/* ========================================================================
+   September UFN service refinement
+   ======================================================================== */
+body{
+  background:
+    linear-gradient(180deg,rgba(3,12,24,.64),rgba(2,8,16,.88)),
+    url("assets/site-background.png") center top / cover fixed no-repeat;
+}
+.topbar{
+  background:
+    linear-gradient(90deg,rgba(3,15,29,.84),rgba(6,24,45,.64)),
+    url("assets/bar-background.png") center / cover no-repeat;
+}
+.deployment-visual-banner{
+  background:
+    linear-gradient(90deg,rgba(3,15,29,.72),rgba(4,19,37,.50)),
+    url("assets/bar-background.png") center / cover no-repeat;
+}
+/* Remove the old render-crop imagery entirely. */
+.service-hero,.deployment-visual-banner,.topbar{background-blend-mode:normal}
+
+.station-grid.one{grid-template-columns:minmax(0,1fr)}
+.station-grid.one .ship-card{width:100%;max-width:none}
+.player-layout .roster-panel{min-width:0}
+
+/* Faction cards: artwork is a subtle identity texture, not a pasted-on poster. */
+.ship-faction-identity{display:none!important}
+.faction-tile{display:none!important}
+.ship-card{position:relative;isolation:isolate}
+.ship-card:before{
+  content:"";position:absolute;inset:0 0 auto auto;width:42%;height:145px;
+  background-image:linear-gradient(90deg,transparent,rgba(3,13,24,.82)),var(--faction-tile);
+  background-size:cover;background-position:center;opacity:.10;z-index:-1;pointer-events:none;
+}
+.ship-brand{
+  min-height:106px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+  gap:14px;align-items:center;padding:15px 16px;border-bottom:1px solid rgba(255,255,255,.06);
+  background:linear-gradient(90deg,rgba(9,39,67,.96),rgba(5,22,39,.78));
+}
+.ship-card.ghost .ship-brand{background:linear-gradient(90deg,rgba(8,57,45,.94),rgba(4,27,23,.78))}
+.ship-brand-copy{min-width:0}.faction-strap{margin-top:5px;color:#d5b455;font:700 8px "Orbitron";letter-spacing:.16em;text-transform:uppercase}
+.ship-card.ghost .faction-strap{color:#72e0a8}
+.faction-badge{width:68px;height:68px;object-fit:cover;border-radius:50%;flex:0 0 auto}
+
+/* Multiple players on one browser. */
+.local-profiles{margin:0 0 14px;padding:12px;border:1px solid rgba(91,169,244,.18);border-radius:12px;background:rgba(4,20,36,.45)}
+.local-profile-list{display:grid;gap:7px;margin-top:8px}
+.local-profile{width:100%;display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 11px;border:1px solid rgba(91,169,244,.18);border-radius:9px;background:#071a2d;color:var(--text);cursor:pointer;text-align:left}
+.local-profile.current{border-color:var(--gold);background:linear-gradient(90deg,rgba(239,199,111,.11),#071a2d)}
+.local-profile span{font-weight:700;font-size:16px;min-width:0;overflow-wrap:anywhere}.local-profile small{font:700 8px "Orbitron";letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.profile-actions{margin:0 0 14px}.profile-actions .btn{width:100%}
+
+/* Give the single-ship roster generous horizontal space. */
+@media(min-width:901px){
+  .player-layout:has(.station-grid.one){grid-template-columns:minmax(300px,390px) minmax(0,1fr)}
+  .player-layout:has(.station-grid.one) .station-grid.one .station{padding-left:18px;padding-right:18px}
+}
+@media(max-width:700px){
+  body{background-attachment:scroll}
+  .ship-brand{grid-template-columns:54px minmax(0,1fr);min-height:84px;padding:11px}
+  .ship-brand>.pill{grid-column:1/-1;justify-self:start;margin-left:66px;margin-top:-10px}
+  .faction-badge{width:52px;height:52px}
+  .faction-strap{font-size:7px;letter-spacing:.09em}
+}
