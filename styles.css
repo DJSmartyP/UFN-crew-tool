@@ -776,3 +776,16 @@ body{
   .ufn-mark,.ufn-mark img{width:50px!important;height:50px!important}
   .masthead-tools{justify-content:flex-end;margin:5px 2px -3px}
 }
+
+
+.panel-heading-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.panel-heading-actions h2{margin:0;}
+@media (max-width:560px){
+  .panel-heading-actions{align-items:flex-start;flex-direction:column;}
+}

@@ -480,14 +480,129 @@ async function generateUfnCrewPdf(){
 }
 
 
-async function manageDeployment(id){clearUnsubs();const ref=doc(db,'ufnDeployments',id),snap=await getDoc(ref);if(!snap.exists()){renderDashboard();return;}activeDeployment={id,...snap.data()};players=[];main.innerHTML=`<div class="deployment-visual-banner"><div class="deployment-visual-copy"><span>Interstellar Deployment Planner · UFN Deployment Services</span><b>${esc(activeDeployment.title)}</b><small>${esc(dateText(activeDeployment.date))}</small></div><div class="deployment-factions"><img src="assets/ufn-faction.png" alt="UFN">${activeDeployment.shipCount===2?'<span>+</span><img src="assets/ghost-faction.png" alt="Ghosts">':''}</div></div><div class="page-head compact-management-head"><div><button id="backDash" class="btn ghost tiny">← Dashboard</button><div class="eyebrow" style="margin-top:10px">Crew management</div></div><div class="actions"><button id="downloadCrewPdf" class="btn primary">Download crew PDF</button><button id="setupBtn" class="btn ghost">Deployment setup</button><button id="toggleClosed" class="btn ${activeDeployment.closed?'success':'danger'}">${activeDeployment.closed?'Open choices':'Close choices'}</button><button id="deleteDeployment" class="btn danger">Delete deployment</button></div></div><div class="grid two"><aside><section class="panel"><h2>Player link</h2><p class="sub">Share this link with everyone who should add preferences.</p><div class="share-box"><input id="manageLink" readonly value="${esc(playerUrl(id))}"><button id="copyManageLink" class="btn primary tiny">Copy link</button></div><div id="responseStats" class="mission-meta"></div><div id="manageMessage" class="message"></div></section><section class="panel" style="margin-top:14px"><h2>Responses</h2><div class="field"><label>Registered player</label><select id="playerSelect" class="select-player"><option value="">Select a player…</option></select></div><div id="responseEditor" class="response-editor"><div class="sub">Select a registered player to view or edit their preferences and organiser locks.</div></div></section></aside><section class="panel"><div class="eyebrow">Live suggestion</div><h2>Current crew plan</h2><p class="sub">Station preferences are prioritised globally. Organiser ship/station locks are hard constraints.</p><div id="roster"></div></section></div>`;
-  $('#backDash').onclick=()=>renderDashboard();$('#copyManageLink').onclick=()=>navigator.clipboard.writeText(playerUrl(id));$('#downloadCrewPdf').onclick=generateUfnCrewPdf;$('#setupBtn').onclick=()=>openDeploymentModal(activeDeployment);$('#toggleClosed').onclick=async()=>updateDoc(ref,{closed:!activeDeployment.closed,updatedAt:serverTimestamp()});$('#deleteDeployment').onclick=()=>deleteDeploymentAdmin(activeDeployment);$('#playerSelect').onchange=()=>renderResponseEditor($('#playerSelect').value);
+async function manageDeployment(id){clearUnsubs();const ref=doc(db,'ufnDeployments',id),snap=await getDoc(ref);if(!snap.exists()){renderDashboard();return;}activeDeployment={id,...snap.data()};players=[];main.innerHTML=`<div class="deployment-visual-banner"><div class="deployment-visual-copy"><span>Interstellar Deployment Planner · UFN Deployment Services</span><b>${esc(activeDeployment.title)}</b><small>${esc(dateText(activeDeployment.date))}</small></div><div class="deployment-factions"><img src="assets/ufn-faction.png" alt="UFN">${activeDeployment.shipCount===2?'<span>+</span><img src="assets/ghost-faction.png" alt="Ghosts">':''}</div></div><div class="page-head compact-management-head"><div><button id="backDash" class="btn ghost tiny">← Dashboard</button><div class="eyebrow" style="margin-top:10px">Crew management</div></div><div class="actions"><button id="downloadCrewPdf" class="btn primary">Download crew PDF</button><button id="setupBtn" class="btn ghost">Deployment setup</button><button id="toggleClosed" class="btn ${activeDeployment.closed?'success':'danger'}">${activeDeployment.closed?'Open choices':'Close choices'}</button><button id="deleteDeployment" class="btn danger">Delete deployment</button></div></div><div class="grid two"><aside><section class="panel"><h2>Player link</h2><p class="sub">Share this link with everyone who should add preferences.</p><div class="share-box"><input id="manageLink" readonly value="${esc(playerUrl(id))}"><button id="copyManageLink" class="btn primary tiny">Copy link</button></div><div id="responseStats" class="mission-meta"></div><div id="manageMessage" class="message"></div></section><section class="panel" style="margin-top:14px"><div class="panel-heading-actions"><h2>Responses</h2><button id="addPlayer" class="btn primary tiny">Add player</button></div><div class="field"><label>Registered player</label><select id="playerSelect" class="select-player"><option value="">Select a player…</option></select></div><div id="responseEditor" class="response-editor"><div class="sub">Select a registered player to view or edit their preferences and organiser locks.</div></div></section></aside><section class="panel"><div class="eyebrow">Live suggestion</div><h2>Current crew plan</h2><p class="sub">Station preferences are prioritised globally. Organiser ship/station locks are hard constraints.</p><div id="roster"></div></section></div>`;
+  $('#backDash').onclick=()=>renderDashboard();$('#copyManageLink').onclick=()=>navigator.clipboard.writeText(playerUrl(id));$('#downloadCrewPdf').onclick=generateUfnCrewPdf;$('#addPlayer').onclick=()=>openPlayerAdminModal(null);$('#setupBtn').onclick=()=>openDeploymentModal(activeDeployment);$('#toggleClosed').onclick=async()=>updateDoc(ref,{closed:!activeDeployment.closed,updatedAt:serverTimestamp()});$('#deleteDeployment').onclick=()=>deleteDeploymentAdmin(activeDeployment);$('#playerSelect').onchange=()=>renderResponseEditor($('#playerSelect').value);
   unsubs.push(onSnapshot(ref,s=>{if(!s.exists())return renderDashboard();activeDeployment={id,...s.data()};$('#toggleClosed').textContent=activeDeployment.closed?'Open choices':'Close choices';$('#toggleClosed').className=`btn ${activeDeployment.closed?'success':'danger'}`;refreshManage();}));
   unsubs.push(onSnapshot(collection(db,'ufnDeployments',id,'players'),snap=>{players=snap.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>String(a.name).localeCompare(String(b.name)));refreshManage();}));
 }
-function refreshManage(){if(!activeDeployment||!$('#roster'))return;const plan=computePlan(players,activeDeployment);$('#roster').innerHTML=renderRoster(plan,activeDeployment,true);$('#responseStats').innerHTML=`<span class="pill">${players.length}/${capFor(activeDeployment)} responses</span><span class="pill">${plan.assignments.filter(a=>a.quality.rank===1).length} first choices</span>`;const sel=$('#playerSelect');const keep=sel.value;sel.innerHTML='<option value="">Select a player…</option>'+players.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');if(players.some(p=>p.id===keep)){sel.value=keep;renderResponseEditor(keep);}else renderResponseEditor('');}
+function refreshManage(){if(!activeDeployment||!$('#roster'))return;const plan=computePlan(players,activeDeployment);$('#roster').innerHTML=renderRoster(plan,activeDeployment,true);$('#responseStats').innerHTML=`<span class="pill">${players.length}/${capFor(activeDeployment)} responses</span><span class="pill">${plan.assignments.filter(a=>a.quality.rank===1).length} first choices</span>`;const addBtn=$('#addPlayer');if(addBtn){const full=players.length>=capFor(activeDeployment);addBtn.disabled=full;addBtn.title=full?'Deployment is full':'';}const sel=$('#playerSelect');const keep=sel.value;sel.innerHTML='<option value="">Select a player…</option>'+players.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');if(players.some(p=>p.id===keep)){sel.value=keep;renderResponseEditor(keep);}else renderResponseEditor('');}
 function renderResponseEditor(id){const box=$('#responseEditor');if(!box)return;const p=players.find(x=>x.id===id);if(!p){box.innerHTML='<div class="sub">Select a registered player to view or edit their preferences and organiser locks.</div>';return;}const plan=computePlan(players,activeDeployment),a=plan.assignments.find(x=>x.playerId===p.id),o=overrideFor(activeDeployment,p.id),ships=shipDefs(activeDeployment);box.innerHTML=`<h3>${esc(p.name)}</h3><div class="assignment">${a?`${esc(a.ship.name)} • ${esc(a.role)}`:'Awaiting assignment'}</div><div class="response-editor-grid"><div><div class="label">Station preferences</div><div class="prefs-preview">${preferenceTags(p.prefs||[])}</div>${activeDeployment.shipCount===2?`<dl><dt>Preferred ship</dt><dd>${p.shipPref?(p.shipPref==='ufn'?esc(activeDeployment.ufnShipName):esc(activeDeployment.ghostShipName)):'No preference'}</dd></dl>`:''}<dl><dt>Really don't want</dt><dd>${(p.dislikes||[]).length?(p.dislikes||[]).map(esc).join(', '):'None'}</dd></dl></div><div><dl><dt>Current result</dt><dd>${a?esc(a.quality.label):'Awaiting assignment'}</dd><dt>Organiser ship lock</dt><dd>${o.shipId?(o.shipId==='ufn'?esc(activeDeployment.ufnShipName):esc(activeDeployment.ghostShipName)):'None'}</dd><dt>Organiser station lock</dt><dd>${o.role||'None'}</dd></dl><div class="actions"><button id="editPlayer" class="btn primary">Edit player</button><button id="deletePlayer" class="btn danger">Delete</button></div></div></div>`;$('#editPlayer').onclick=()=>openPlayerAdminModal(p);$('#deletePlayer').onclick=()=>deletePlayerAdmin(p);}
-function openPlayerAdminModal(p){const o=overrideFor(activeDeployment,p.id),wrap=document.createElement('div');wrap.className='modal-backdrop';wrap.innerHTML=`<section class="modal panel"><button class="btn ghost tiny modal-close">Close</button><div class="eyebrow">Player preferences</div><h2>${esc(p.name)}</h2><form id="adminPlayerForm"><div class="field"><label>Player name</label><input id="apName" value="${esc(p.name)}" required maxlength="60"></div>${activeDeployment.shipCount===2?`<div class="field"><label>Player ship preference</label><select id="apShipPref"><option value="">No preference</option><option value="ufn"${p.shipPref==='ufn'?' selected':''}>${esc(activeDeployment.ufnShipName)}</option><option value="ghosts"${p.shipPref==='ghosts'?' selected':''}>${esc(activeDeployment.ghostShipName)}</option></select></div>`:''}<div class="field"><label>1st station</label><select id="ap1">${roleOptions(p.prefs?.[0])}</select></div><div class="field"><label>2nd station</label><select id="ap2">${roleOptions(p.prefs?.[1])}</select></div><div class="field"><label>3rd station</label><select id="ap3">${roleOptions(p.prefs?.[2])}</select></div><div class="label">Really don't want</div><div id="apDislikes" class="checks">${ROLES.map(r=>`<label class="check"><input type="checkbox" value="${r.name}"${(p.dislikes||[]).includes(r.name)?' checked':''}><span>${r.name}</span></label>`).join('')}</div><h3 style="margin-top:14px">Organiser locks</h3><div class="field"><label>Lock to ship</label><select id="lockShip"><option value="">No ship lock</option>${shipDefs(activeDeployment).map(s=>`<option value="${s.id}"${o.shipId===s.id?' selected':''}>${esc(s.name)}</option>`).join('')}</select></div><div class="field"><label>Lock to station</label><select id="lockRole">${lockRoleOptions(o.role||'')}</select></div><div class="actions"><button class="btn primary">Save changes</button></div><div id="apMessage" class="message"></div></form></section>`;document.body.appendChild(wrap);wrap.querySelector('.modal-close').onclick=()=>wrap.remove();setupPreferenceAutofill(['ap1','ap2','ap3']);$('#adminPlayerForm').onsubmit=async e=>{e.preventDefault();const payload={name:$('#apName').value.trim(),shipPref:$('#apShipPref')?.value||'',prefs:[$('#ap1').value,$('#ap2').value,$('#ap3').value],dislikes:[...$('#apDislikes').querySelectorAll('input:checked')].map(x=>x.value),source:p.source||'player',updatedAt:serverTimestamp()};const err=validatePrefs(payload);if(err)return msg($('#apMessage'),err,'error');try{await updateDoc(doc(db,'ufnDeployments',activeDeployment.id,'players',p.id),payload);const overrides={...(activeDeployment.overrides||{})};const shipId=$('#lockShip').value,role=$('#lockRole').value;if(shipId||role)overrides[p.id]={shipId,role};else delete overrides[p.id];await updateDoc(doc(db,'ufnDeployments',activeDeployment.id),{overrides,updatedAt:serverTimestamp()});wrap.remove()}catch(err){msg($('#apMessage'),err.message,'error')}};}
+function openPlayerAdminModal(p=null){
+  const isNew=!p;
+  if(isNew&&players.length>=capFor(activeDeployment)){alert(`This deployment is full (${capFor(activeDeployment)} crew).`);return;}
+  const playerRef=isNew?doc(collection(db,'ufnDeployments',activeDeployment.id,'players')):doc(db,'ufnDeployments',activeDeployment.id,'players',p.id);
+  const playerId=playerRef.id;
+  const o=isNew?{}:overrideFor(activeDeployment,p.id);
+  const initialPrefs=isNew?[FLEX,FLEX,FLEX]:(p.prefs||['','','']);
+  const initialDislikes=isNew?[]:(p.dislikes||[]);
+  const wrap=document.createElement('div');
+  wrap.className='modal-backdrop';
+  wrap.innerHTML=`<section class="modal panel">
+    <button class="btn ghost tiny modal-close">Close</button>
+    <div class="eyebrow">${isNew?'Organiser entry':'Player preferences'}</div>
+    <h2>${isNew?'Add player':esc(p.name)}</h2>
+    ${isNew?`<p class="sub">Add someone directly to this deployment. If you do not know their preferences, leave the defaults as ${FLEX_LABEL}.</p>`:''}
+    <form id="adminPlayerForm">
+      <div class="field"><label>Player name</label><input id="apName" value="${esc(p?.name||'')}" required maxlength="60" autocomplete="off"></div>
+      ${activeDeployment.shipCount===2?`<div class="field"><label>Player ship preference</label><select id="apShipPref"><option value="">No preference</option><option value="ufn"${p?.shipPref==='ufn'?' selected':''}>${esc(activeDeployment.ufnShipName)}</option><option value="ghosts"${p?.shipPref==='ghosts'?' selected':''}>${esc(activeDeployment.ghostShipName)}</option></select></div>`:''}
+      <div class="field"><label>1st station</label><select id="ap1">${roleOptions(initialPrefs[0])}</select></div>
+      <div class="field"><label>2nd station</label><select id="ap2">${roleOptions(initialPrefs[1])}</select></div>
+      <div class="field"><label>3rd station</label><select id="ap3">${roleOptions(initialPrefs[2])}</select></div>
+      <div class="label">Really don't want</div>
+      <div id="apDislikes" class="checks">${ROLES.map(r=>`<label class="check"><input type="checkbox" value="${r.name}"${initialDislikes.includes(r.name)?' checked':''}><span>${r.name}</span></label>`).join('')}</div>
+      <h3 style="margin-top:14px">Organiser locks</h3>
+      <div class="field"><label>Lock to ship</label><select id="lockShip"><option value="">No ship lock</option>${shipDefs(activeDeployment).map(s=>`<option value="${s.id}"${o.shipId===s.id?' selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>Lock to station</label><select id="lockRole">${lockRoleOptions(o.role||'')}</select></div>
+      <div class="actions"><button class="btn primary">${isNew?'Add player':'Save changes'}</button></div>
+      <div id="apMessage" class="message"></div>
+    </form>
+  </section>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector('.modal-close').onclick=()=>wrap.remove();
+  setupPreferenceAutofill(['ap1','ap2','ap3']);
+
+  $('#adminPlayerForm').onsubmit=async e=>{
+    e.preventDefault();
+    const payload={
+      name:$('#apName').value.trim(),
+      shipPref:$('#apShipPref')?.value||'',
+      prefs:[$('#ap1').value,$('#ap2').value,$('#ap3').value],
+      dislikes:[...$('#apDislikes').querySelectorAll('input:checked')].map(x=>x.value),
+      source:isNew?'organiser':(p.source||'player'),
+      updatedAt:serverTimestamp()
+    };
+    const err=validatePrefs(payload);
+    if(err)return msg($('#apMessage'),err,'error');
+
+    const depRef=doc(db,'ufnDeployments',activeDeployment.id);
+    const shipId=$('#lockShip').value,role=$('#lockRole').value;
+    const newClaimRef=doc(db,'ufnDeployments',activeDeployment.id,'nameClaims',claimId(payload.name));
+
+    try{
+      if(isNew){
+        await runTransaction(db,async tx=>{
+          const [depSnap,claimSnap]=await Promise.all([tx.get(depRef),tx.get(newClaimRef)]);
+          if(!depSnap.exists())throw new Error('Deployment no longer exists.');
+          const depData=depSnap.data();
+          if(Number(depData.responseCount||0)>=capFor(depData))throw new Error(`This deployment is full (${capFor(depData)} crew).`);
+          if(claimSnap.exists())throw new Error('That name is already registered for this deployment.');
+
+          const overrides={...(depData.overrides||{})};
+          if(shipId||role)overrides[playerId]={shipId,role};
+
+          tx.set(playerRef,{...payload,createdAt:serverTimestamp()});
+          // Existing rules allow the signed-in organiser to hold the name claim.
+          // playerDocId links the claim to the actual roster record while playerId
+          // remains the organiser UID, so player-side duplicate protection still works.
+          tx.set(newClaimRef,{
+            playerId:currentUser.uid,
+            playerDocId:playerId,
+            name:payload.name,
+            source:'organiser',
+            updatedAt:serverTimestamp()
+          });
+          tx.update(depRef,{
+            responseCount:Number(depData.responseCount||0)+1,
+            overrides,
+            updatedAt:serverTimestamp()
+          });
+        });
+      }else if(p.source==='organiser'&&normalize(payload.name)!==normalize(p.name)){
+        const oldClaimRef=doc(db,'ufnDeployments',activeDeployment.id,'nameClaims',claimId(p.name));
+        await runTransaction(db,async tx=>{
+          const [depSnap,newClaimSnap]=await Promise.all([tx.get(depRef),tx.get(newClaimRef)]);
+          if(!depSnap.exists())throw new Error('Deployment no longer exists.');
+          if(newClaimSnap.exists()){
+            const c=newClaimSnap.data();
+            const belongsToThisPlayer=c.playerDocId===playerId;
+            if(!belongsToThisPlayer)throw new Error('That name is already registered for this deployment.');
+          }
+          const overrides={...(depSnap.data().overrides||{})};
+          if(shipId||role)overrides[playerId]={shipId,role};else delete overrides[playerId];
+          tx.update(playerRef,payload);
+          tx.delete(oldClaimRef);
+          tx.set(newClaimRef,{
+            playerId:currentUser.uid,
+            playerDocId:playerId,
+            name:payload.name,
+            source:'organiser',
+            updatedAt:serverTimestamp()
+          },{merge:true});
+          tx.update(depRef,{overrides,updatedAt:serverTimestamp()});
+        });
+      }else{
+        // Preserve the existing edit behaviour for player-owned registrations.
+        await updateDoc(playerRef,payload);
+        const overrides={...(activeDeployment.overrides||{})};
+        if(shipId||role)overrides[playerId]={shipId,role};else delete overrides[playerId];
+        await updateDoc(depRef,{overrides,updatedAt:serverTimestamp()});
+      }
+      wrap.remove();
+    }catch(err){
+      msg($('#apMessage'),err.message,'error');
+    }
+  };
+}
 async function deleteDeploymentAdmin(deployment){
   const title=deployment?.title||'this deployment';
   if(!confirm(`Delete ${title}? This permanently removes the deployment and all registered players.`))return;

@@ -97,3 +97,14 @@ The organiser crew-management screen now includes **Download crew PDF**.
 - Player pages have no empty utility row.
 - The masthead is materially shorter.
 - The existing `assets/bar-background.png` is now deliberately visible behind deployment name/date details rather than being hidden by a heavy dark overlay.
+
+
+## Organiser-added players
+The organiser can now add players directly from **Manage crew → Responses → Add player**.
+
+- New organiser-added players default to `No preference / fill a gap`.
+- The organiser can enter ship preference, station preferences, dislikes and optional hard ship/station locks.
+- Capacity limits remain 6 for one ship and 12 for two ships.
+- Duplicate-name protection still applies.
+- Organiser-added players immediately participate in the live allocation and PDF export.
+- No Firestore rules change is required for this feature; the existing shared rules file is unchanged.
