@@ -1,21 +1,28 @@
-# UFN short-crew planner update
+# UFN elegant navigation system update
 
 Replace:
-- router.js
+- navigation-polish.js
 - campaign.css
 
-Add:
-- short-crew-planner.js
+Add / replace:
+- assets/nav-deployments.png
+- assets/nav-campaign-crews.png
+- assets/nav-crew-access.png
+- assets/nav-archive.png
 
-No Firebase/Auth/Firestore rule changes are required.
+No Firebase, Auth, Firestore or rules changes are required.
 
-Behaviour:
-- 6 players: normal one-player-per-station plan.
-- 5 players: Captain always takes one additional station. The optimiser chooses which extra station gives the best overall preference match.
-- 4 players: Helm + Weapons are always the same player, and Captain also takes one of Engineering / Science / Relay. The optimiser chooses the best Captain extra station.
-- 3 or fewer players: existing one-player-per-station behaviour remains; no extra combined-role rules are invented.
-- Two-ship deployments preserve the existing planner's ship allocation first, then apply the 4/5-player rule independently to any ship that ends up with 4 or 5 crew.
+Navigation coverage:
+- Main admin dashboard: full icon navigation rail.
+- Campaign crew administration: full icon navigation rail.
+- Admin campaign crew hub: full rail + 'Back to campaign crews' contextual row.
+- Archive: full icon navigation rail.
+- Standalone deployment management: full rail + 'Back to deployments' contextual row.
+- Campaign crew directory: clean Campaign Crews navigation state.
+- Campaign password/access screen: 'Back to all campaign crews'.
+- Campaign crew hub: All Campaign Crews + current crew + Campaign Settings.
+- Campaign deployment management: contextual 'Back to crew hub'.
+- Campaign player deployment: contextual 'Back to crew hub' where a campaign is known.
+- Standalone player deployment: clean current-page navigation without inventing a destination.
 
-The new layer changes only computed/displayed crew assignments. It does not alter player records, deployment records, registration transactions, authentication or Firestore rules.
-
-The organiser/player roster identifies combined stations clearly. The crew PDF is intercepted only when a short-crew rule is active so the PDF reflects the same combined assignments.
+The four PNG icons have been resized to 192x192 for fast loading while remaining sharp in the UI.
