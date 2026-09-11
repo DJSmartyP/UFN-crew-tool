@@ -122,9 +122,16 @@ service cloud.firestore {
       }
     }
 
-    // Public-by-known-slug campaign metadata. This document contains the
-    // Firebase Auth UID/email used for sign-in, but NEVER contains a password
-    // or password hash. Listing all crews remains admin-only.
+    // Public, sanitised campaign directory. This contains only display name
+    // and active status. Campaign passwords and Firebase credential details
+    // remain in ufnCampaignCrews and are not listable publicly.
+    match /ufnCampaignDirectory/{crewSlug} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Campaign metadata. Passwords are held by Firebase Authentication and are
+    // never stored in Firestore.
     match /ufnCampaignCrews/{crewSlug} {
       allow get: if true;
       allow list: if isAdmin();
@@ -144,14 +151,10 @@ service cloud.firestore {
 
     // UFN-only Interstellar Deployment Planner variant.
     match /ufnDeployments/{deploymentId} {
-      // Players use known deployment links. Any Firebase-authenticated session
-      // may get that specific deployment, matching the original UFN behaviour.
-      // Enumeration remains restricted by the separate list rule below.
-      // Preserve the original UFN player model: a known deployment link is
-      // readable by any Firebase-authenticated session. Enumeration remains
-      // restricted by the separate list rule below.
+      // Known player links remain readable by any authenticated Firebase session.
       allow get: if signedIn();
 
+      // Only admin or the matching campaign credential may enumerate deployments.
       allow list: if isAdmin()
         || (
           signedIn()
@@ -175,7 +178,15 @@ service cloud.firestore {
           && isCampaignCrewAuth(resource.data.campaignCrew)
         );
 
+      // IMPORTANT: keep the original player responseCount update first. This
+      // avoids campaign ownership checks being evaluated for ordinary player saves.
       allow update: if isAdmin()
+        || (
+          signedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["responseCount", "updatedAt"])
+          && request.resource.data.responseCount == resource.data.responseCount + 1
+          && request.resource.data.responseCount <= (resource.data.shipCount == 2 ? 12 : 6)
+        )
         || (
           signedIn()
           && resource.data.campaignCrew is string
@@ -183,18 +194,14 @@ service cloud.firestore {
           && request.resource.data.campaignCrew == resource.data.campaignCrew
           && request.resource.data.shipCount == 1
           && request.resource.data.ghostShipName == ""
-        )
-        || (
-          signedIn()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["responseCount", "updatedAt"])
-          && request.resource.data.responseCount == resource.data.responseCount + 1
-          && request.resource.data.responseCount <= (resource.data.campaignCrew is string ? 6 : (resource.data.shipCount == 2 ? 12 : 6))
         );
 
       match /players/{playerId} {
         allow read: if signedIn();
+
+        // Preserve the original player self-write path before checking campaign
+        // ownership. Campaign organisers then get their additional management path.
         allow create: if isAdmin()
-          || campaignOwnsUfnDeployment(deploymentId)
           || (
             signedIn()
             && request.auth.uid == playerId
@@ -204,9 +211,10 @@ service cloud.firestore {
             && request.resource.data.prefs is list
             && request.resource.data.prefs.size() == 3
             && request.resource.data.dislikes is list
-          );
+          )
+          || campaignOwnsUfnDeployment(deploymentId);
+
         allow update: if isAdmin()
-          || campaignOwnsUfnDeployment(deploymentId)
           || (
             signedIn()
             && request.auth.uid == playerId
@@ -217,24 +225,28 @@ service cloud.firestore {
             && request.resource.data.prefs is list
             && request.resource.data.prefs.size() == 3
             && request.resource.data.dislikes is list
-          );
+          )
+          || campaignOwnsUfnDeployment(deploymentId);
+
         allow delete: if isAdmin() || campaignOwnsUfnDeployment(deploymentId);
       }
 
       match /nameClaims/{claimId} {
         allow read: if signedIn();
+
         allow create, update: if isAdmin()
-          || campaignOwnsUfnDeployment(deploymentId)
           || (
             signedIn()
             && request.resource.data.playerId == request.auth.uid
-          );
+          )
+          || campaignOwnsUfnDeployment(deploymentId);
+
         allow delete: if isAdmin()
-          || campaignOwnsUfnDeployment(deploymentId)
           || (
             signedIn()
             && resource.data.playerId == request.auth.uid
-          );
+          )
+          || campaignOwnsUfnDeployment(deploymentId);
       }
     }
   }

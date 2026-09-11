@@ -18,3 +18,46 @@
 .campaign-roster-table th,.campaign-roster-table td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}
 .campaign-roster-table th{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;opacity:.7}
 @media(max-width:760px){.campaign-settings-grid{grid-template-columns:1fr}.campaign-dashboard-actions{justify-content:flex-start}.campaign-card .campaign-card-top{display:block}}
+
+/* Shared campaign crew directory */
+.campaign-directory-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+.campaign-directory-card{display:flex;flex-direction:column;min-height:190px}
+.campaign-directory-card .actions{margin-top:auto}
+
+/* Admin campaign crew accordions */
+.campaign-accordion-list{display:grid;gap:14px}
+.campaign-crew-accordion{padding:0;overflow:hidden}
+.campaign-crew-accordion>summary{list-style:none;cursor:pointer;padding:18px 20px}
+.campaign-crew-accordion>summary::-webkit-details-marker{display:none}
+.campaign-summary-main{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.campaign-summary-main h2{margin:.2rem 0 0}
+.campaign-summary-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.campaign-chevron{font-size:1.5rem;line-height:1;transition:transform .15s ease}
+.campaign-crew-accordion[open] .campaign-chevron{transform:rotate(180deg)}
+.campaign-accordion-body{padding:0 20px 20px;border-top:1px solid rgba(255,255,255,.09)}
+.campaign-admin-actions{padding-top:16px}
+.campaign-deployment-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:stretch}
+.campaign-card-badges,.campaign-player-marker{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pill.campaign-type{border-color:rgba(233,185,73,.45);background:rgba(233,185,73,.12)}
+.campaign-deployment-card{display:flex;flex-direction:column;min-height:310px}
+.campaign-deployment-card .actions{margin-top:auto}
+
+/* Standard deployment tile sizing */
+#deployments.grid.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+#deployments.grid.cards>.mission-card{display:flex;flex-direction:column;min-width:0;min-height:330px}
+#deployments.grid.cards>.mission-card>.actions{margin-top:auto}
+#deployments.grid.cards>.mission-card .share-box input,
+.campaign-deployment-grid .mission-card .share-box input{min-width:0}
+.campaign-player-marker{margin-bottom:8px}
+
+@media(min-width:1500px){
+  #deployments.grid.cards,.campaign-deployment-grid,.campaign-directory-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:980px){
+  #deployments.grid.cards,.campaign-deployment-grid,.campaign-directory-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:640px){
+  #deployments.grid.cards,.campaign-deployment-grid,.campaign-directory-grid{grid-template-columns:1fr}
+  .campaign-summary-main{align-items:flex-start;flex-direction:column}
+  .campaign-summary-meta{justify-content:flex-start}
+}
