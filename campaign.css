@@ -1,0 +1,20 @@
+.campaign-login-shell{max-width:620px;margin:28px auto}
+.campaign-login-card{padding:28px}
+.campaign-login-card h1{margin:.25rem 0 .5rem}
+.campaign-lock-note{margin-top:14px;padding:12px 14px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.035)}
+.campaign-dashboard-head{align-items:flex-end}
+.campaign-dashboard-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.campaign-card .campaign-card-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.campaign-card .campaign-slug{font-family:monospace;opacity:.8}
+.campaign-status-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.campaign-settings-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.campaign-warning{border-left:3px solid #e9b949;padding-left:12px}
+.campaign-password-row{display:grid;grid-template-columns:1fr auto;gap:8px}
+.campaign-password-row input{min-width:0}
+.campaign-divider{height:1px;background:rgba(255,255,255,.1);margin:18px 0}
+.campaign-admin-nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.campaign-small{font-size:.9rem;opacity:.8}
+.campaign-roster-table{width:100%;border-collapse:collapse;margin-top:12px}
+.campaign-roster-table th,.campaign-roster-table td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}
+.campaign-roster-table th{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;opacity:.7}
+@media(max-width:760px){.campaign-settings-grid{grid-template-columns:1fr}.campaign-dashboard-actions{justify-content:flex-start}.campaign-card .campaign-card-top{display:block}}
