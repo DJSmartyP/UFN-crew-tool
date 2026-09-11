@@ -16,9 +16,6 @@ service cloud.firestore {
     function ownsMission(missionId) {
       return signedIn() && get(/databases/$(database)/documents/missions/$(missionId)).data.ownerUid == request.auth.uid;
     }
-    function isAnonymousUser() {
-      return signedIn() && request.auth.token.firebase.sign_in_provider == "anonymous";
-    }
     function isCampaignCrewAuth(crewSlug) {
       return signedIn()
         && exists(/databases/$(database)/documents/ufnCampaignCrews/$(crewSlug))
@@ -112,14 +109,14 @@ service cloud.firestore {
         allow create, update: if isAdmin()
           || ownsMission(missionId)
           || (
-            isAnonymousUser()
+            signedIn()
             && request.resource.data.playerId == request.auth.uid
           );
 
         allow delete: if isAdmin()
           || ownsMission(missionId)
           || (
-            isAnonymousUser()
+            signedIn()
             && resource.data.playerId == request.auth.uid
           );
       }
@@ -147,16 +144,13 @@ service cloud.firestore {
 
     // UFN-only Interstellar Deployment Planner variant.
     match /ufnDeployments/{deploymentId} {
-      // Anonymous players may get a deployment they were directly linked to,
-      // but cannot enumerate deployments. Campaign users can only read/list
-      // deployments belonging to their authenticated campaign crew.
-      allow get: if isAdmin()
-        || isAnonymousUser()
-        || (
-          signedIn()
-          && resource.data.campaignCrew is string
-          && isCampaignCrewAuth(resource.data.campaignCrew)
-        );
+      // Players use known deployment links. Any Firebase-authenticated session
+      // may get that specific deployment, matching the original UFN behaviour.
+      // Enumeration remains restricted by the separate list rule below.
+      // Preserve the original UFN player model: a known deployment link is
+      // readable by any Firebase-authenticated session. Enumeration remains
+      // restricted by the separate list rule below.
+      allow get: if signedIn();
 
       allow list: if isAdmin()
         || (
@@ -191,18 +185,18 @@ service cloud.firestore {
           && request.resource.data.ghostShipName == ""
         )
         || (
-          isAnonymousUser()
+          signedIn()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["responseCount", "updatedAt"])
           && request.resource.data.responseCount == resource.data.responseCount + 1
           && request.resource.data.responseCount <= (resource.data.campaignCrew is string ? 6 : (resource.data.shipCount == 2 ? 12 : 6))
         );
 
       match /players/{playerId} {
-        allow read: if isAdmin() || isAnonymousUser() || campaignOwnsUfnDeployment(deploymentId);
+        allow read: if signedIn();
         allow create: if isAdmin()
           || campaignOwnsUfnDeployment(deploymentId)
           || (
-            isAnonymousUser()
+            signedIn()
             && request.auth.uid == playerId
             && request.resource.data.source == "player"
             && request.resource.data.name is string
@@ -214,7 +208,7 @@ service cloud.firestore {
         allow update: if isAdmin()
           || campaignOwnsUfnDeployment(deploymentId)
           || (
-            isAnonymousUser()
+            signedIn()
             && request.auth.uid == playerId
             && resource.data.source == "player"
             && request.resource.data.source == "player"
@@ -228,17 +222,17 @@ service cloud.firestore {
       }
 
       match /nameClaims/{claimId} {
-        allow read: if isAdmin() || isAnonymousUser() || campaignOwnsUfnDeployment(deploymentId);
+        allow read: if signedIn();
         allow create, update: if isAdmin()
           || campaignOwnsUfnDeployment(deploymentId)
           || (
-            isAnonymousUser()
+            signedIn()
             && request.resource.data.playerId == request.auth.uid
           );
         allow delete: if isAdmin()
           || campaignOwnsUfnDeployment(deploymentId)
           || (
-            isAnonymousUser()
+            signedIn()
             && resource.data.playerId == request.auth.uid
           );
       }

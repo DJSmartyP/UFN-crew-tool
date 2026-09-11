@@ -19,6 +19,7 @@ const DEFAULT_SINGLE_UFN='UFN Vanguard',DEFAULT_DUAL_UFN='UFN Celeste',DEFAULT_D
 const ROLES=[{name:'Captain',colour:'command'},{name:'Helm',colour:'helm'},{name:'Weapons',colour:'weapons'},{name:'Engineering',colour:'engineering'},{name:'Science',colour:'science'},{name:'Relay',colour:'relay'}];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const normalize=s=>String(s||'').normalize('NFKC').trim().toLocaleLowerCase().replace(/\s+/g,' ');
+const slugify=s=>String(s||'').normalize('NFKD').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60);
 const claimId=name=>encodeURIComponent(normalize(name));
 const capFor=()=>6;
 const roleClass=r=>`role-${String(r).replace(/[^A-Za-z]/g,'')}`;
@@ -75,10 +76,34 @@ async function renderDashboard(){
 function renderDeploymentCard(d){return `<section class="panel mission-card"><div class="mission-date">${esc(dateText(d.date))}</div><h2>${esc(d.title||'UFN Deployment')}</h2><p class="sub">${esc(d.ufnShipName||DEFAULT_SINGLE_UFN)}</p><div class="mission-meta"><span class="pill ${d.closed?'closed':'open'}">${d.closed?'Choices closed':'Choices open'}</span><span class="pill">${Number(d.responseCount||0)}/${capFor(d)} responses</span></div><div class="share-box"><input readonly value="${esc(playerUrl(d.id))}"><button class="btn ghost tiny" data-copy="${esc(d.id)}">Copy player link</button></div><div class="actions"><button class="btn primary" data-manage="${esc(d.id)}">Manage crew</button><button class="btn danger" data-delete-deployment="${esc(d.id)}">Delete</button></div></section>`;}
 function openDeploymentModal(existing=null){
   const initialUfn=existing?.ufnShipName||DEFAULT_SINGLE_UFN;
+  const initialSlug=existing?.id||'';
   const wrap=document.createElement('div');wrap.className='modal-backdrop';
-  wrap.innerHTML=`<section class="modal panel"><button class="btn ghost tiny modal-close">Close</button><div class="eyebrow">${esc(crew.name)}</div><h2>${existing?'Edit':'Create'} deployment</h2><form id="deploymentForm"><div class="field"><label>Deployment name</label><input id="depTitle" required maxlength="80" value="${esc(existing?.title||'')}"></div><div class="field"><label>Date</label><input id="depDate" type="date" required value="${esc(existing?.date||'')}"></div><div class="campaign-small campaign-warning"><b>Campaign deployments use one UFN ship only</b> · maximum 6 players.</div><div class="field" style="margin-top:12px"><label>UFN ship name</label><input id="ufnShip" maxlength="60" required value="${esc(initialUfn)}"></div><div class="actions"><button class="btn primary" type="submit">${existing?'Save setup':'Create deployment'}</button></div><div id="depMessage" class="message"></div></form></section>`;
+  wrap.innerHTML=`<section class="modal panel"><button class="btn ghost tiny modal-close">Close</button><div class="eyebrow">${esc(crew.name)}</div><h2>${existing?'Edit':'Create'} deployment</h2><form id="deploymentForm"><div class="field"><label>Deployment name</label><input id="depTitle" required maxlength="80" value="${esc(existing?.title||'')}"></div><div class="field"><label>Date</label><input id="depDate" type="date" required value="${esc(existing?.date||'')}"></div>${existing?`<div class="field"><label>Player link</label><input readonly value="${esc(playerUrl(existing.id))}"><div class="campaign-small">The custom player link is fixed after creation so existing shared links never break.</div></div>`:`<div class="field"><label>Custom player link name</label><input id="depSlug" required maxlength="60" placeholder="${esc(crewSlug)}-continuum"><div class="campaign-small">Must be unique across the planner. Player link: <span id="depSlugPreview">${esc(location.origin+location.pathname)}?m=your-link</span></div></div>`}<div class="campaign-small campaign-warning"><b>Campaign deployments use one UFN ship only</b> · maximum 6 players.</div><div class="field" style="margin-top:12px"><label>UFN ship name</label><input id="ufnShip" maxlength="60" required value="${esc(initialUfn)}"></div><div class="actions"><button class="btn primary" type="submit">${existing?'Save setup':'Create deployment'}</button></div><div id="depMessage" class="message"></div></form></section>`;
   document.body.appendChild(wrap);wrap.querySelector('.modal-close').onclick=()=>wrap.remove();
-  $('#deploymentForm').onsubmit=async e=>{e.preventDefault();const data={title:$('#depTitle').value.trim(),date:$('#depDate').value,shipCount:1,ufnShipName:$('#ufnShip').value.trim()||DEFAULT_SINGLE_UFN,ghostShipName:'',campaignCrew:crewSlug,closed:existing?.closed||false,overrides:existing?.overrides||{},responseCount:Number(existing?.responseCount||0),updatedAt:serverTimestamp(),createdAt:existing?.createdAt||serverTimestamp()};try{if(existing)await setDoc(doc(db,'ufnDeployments',existing.id),data,{merge:true});else await addDoc(collection(db,'ufnDeployments'),data);wrap.remove();}catch(err){msg($('#depMessage'),err.message,'error')}};
+  if(!existing){
+    const slugInput=$('#depSlug');
+    let slugTouched=false;
+    const updatePreview=()=>{const slug=slugify(slugInput.value)||'your-link';$('#depSlugPreview').textContent=playerUrl(slug);};
+    $('#depTitle').addEventListener('input',()=>{if(!slugTouched){slugInput.value=slugify(`${crewSlug}-${$('#depTitle').value}`);updatePreview();}});
+    slugInput.addEventListener('input',()=>{slugTouched=true;slugInput.value=slugify(slugInput.value);updatePreview();});
+    updatePreview();
+  }
+  $('#deploymentForm').onsubmit=async e=>{
+    e.preventDefault();
+    const data={title:$('#depTitle').value.trim(),date:$('#depDate').value,shipCount:1,ufnShipName:$('#ufnShip').value.trim()||DEFAULT_SINGLE_UFN,ghostShipName:'',campaignCrew:crewSlug,closed:existing?.closed||false,overrides:existing?.overrides||{},responseCount:Number(existing?.responseCount||0),updatedAt:serverTimestamp(),createdAt:existing?.createdAt||serverTimestamp()};
+    try{
+      if(existing){
+        await setDoc(doc(db,'ufnDeployments',existing.id),data,{merge:true});
+      }else{
+        const customId=slugify($('#depSlug').value);
+        if(customId.length<3)throw new Error('Use at least 3 characters for the custom player link.');
+        const ref=doc(db,'ufnDeployments',customId);
+        if((await getDoc(ref)).exists())throw new Error('That custom player link is already in use. Choose another.');
+        await setDoc(ref,data);
+      }
+      wrap.remove();
+    }catch(err){msg($('#depMessage'),err.message,'error')}
+  };
 }
 
 async function manageDeployment(id){

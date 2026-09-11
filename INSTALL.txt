@@ -1,20 +1,21 @@
-UFN CREW DEPLOYMENT — INSTALL
+UFN CAMPAIGN PLAYER FIX + CUSTOM LINKS
+======================================
 
-1. Create a new GitHub repository.
-2. Upload ALL files/folders from this package to the repository root.
-3. GitHub: Settings > Pages > Deploy from a branch > main / root.
-4. Firebase Console > Firestore Database > Rules.
-5. Replace the current rules with the included firestore.rules and Publish.
-   (This file contains the existing IDP rules PLUS the new UFN rules.)
-6. Firebase Authentication > Sign-in method:
-   - Google: Enabled
-   - Anonymous: Enabled
-7. Firebase Authentication > Settings > Authorised domains:
-   add your new GitHub Pages hostname if required.
-8. Open the GitHub Pages URL.
+1. In GitHub repo DJSmartyP/UFN-crew-tool replace:
+   - campaign.js
+   - firestore.rules
 
-IMPORTANT
-- Uses the existing free Firebase Spark project.
-- Uses separate collection: ufnDeployments.
-- No Cloud Functions / billing required.
-- Organiser access is restricted to the ADMIN_UID in firebase-config.js and firestore.rules.
+2. Wait for GitHub Pages to deploy.
+
+3. In Firebase project bc-crew-autoassigner:
+   Firestore Database > Rules
+   Replace the rules with the COMPLETE firestore.rules supplied here and Publish.
+   This is still the combined rules file for the main IDP, UFN, and campaign crews.
+
+4. Test an existing ?m=... player link in an incognito window and register choices.
+
+5. New campaign deployments now include a 'Custom player link name' field.
+   Example: celeste-continuum -> ?m=celeste-continuum
+   Link names are checked for uniqueness across the planner and are fixed after creation.
+
+Existing deployment links continue to work unchanged.
