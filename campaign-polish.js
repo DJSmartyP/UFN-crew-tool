@@ -5,15 +5,12 @@ import {
   getFirestore, collection, doc, getDoc, onSnapshot, query, where,
   updateDoc, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import {
-  getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject
-} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-storage.js';
 
 const params=new URLSearchParams(location.search);
 const crewSlug=String(params.get('crew')||'').trim().toLowerCase();
 const appName=`campaign-portal-${crewSlug||'unknown'}`;
 const app=getApps().find(a=>a.name===appName)||initializeApp(firebaseConfig,appName);
-const auth=getAuth(app),db=getFirestore(app),storage=getStorage(app);
+const auth=getAuth(app),db=getFirestore(app);
 let crew=null;
 let archivedIds=new Set();
 let copyTimer=null;
@@ -24,6 +21,46 @@ const localDate=()=>{
   const d=new Date(),y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
 };
+
+
+function loadPatchImage(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error('Could not read that image.'));
+    reader.onload=()=>{
+      const img=new Image();
+      img.onerror=()=>reject(new Error('That image could not be opened.'));
+      img.onload=()=>resolve(img);
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function compressPatchFile(file){
+  if(!file)throw new Error('Choose an image first.');
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type))throw new Error('Use PNG, JPG or WebP.');
+  if(file.size>8*1024*1024)throw new Error('Choose an image smaller than 8 MB. It will be compressed before saving.');
+  const img=await loadPatchImage(file);
+  let maxEdge=256,quality=.84;
+  for(let attempt=0;attempt<6;attempt++){
+    const scale=Math.min(1,maxEdge/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height));
+    const width=Math.max(1,Math.round((img.naturalWidth||img.width)*scale));
+    const height=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));
+    const canvas=document.createElement('canvas');
+    canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext('2d');
+    if(!ctx)throw new Error('This browser could not prepare the patch image.');
+    ctx.clearRect(0,0,width,height);
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    ctx.drawImage(img,0,0,width,height);
+    const dataUrl=canvas.toDataURL('image/webp',quality);
+    // Keep plenty of headroom below Firestore's 1 MiB document limit.
+    if(dataUrl.length<=180000)return dataUrl;
+    maxEdge=Math.max(128,Math.round(maxEdge*.82));
+    quality=Math.max(.58,quality-.07);
+  }
+  throw new Error('The patch could not be compressed enough. Try a simpler or smaller image.');
+}
 
 function copyFeedback(btn){
   const original=btn.dataset.copyOriginal||btn.textContent;
@@ -181,7 +218,7 @@ function renderPatchSettings(){
   box.innerHTML=`
     <div class="campaign-divider"></div>
     <h3>Crew patch</h3>
-    <p class="sub">Upload a PNG, JPG or WebP patch. Maximum file size: 2 MB.</p>
+    <p class="sub">Upload a PNG, JPG or WebP patch. It is resized and compressed in your browser before being saved to Firestore.</p>
     <div class="campaign-patch-settings-row">
       <div class="campaign-patch-preview">${crew.patchUrl?`<img src="${esc(crew.patchUrl)}" alt="${esc(crew.name)} patch">`:'<span>No patch uploaded</span>'}</div>
       <div class="campaign-patch-controls">
@@ -197,19 +234,15 @@ function renderPatchSettings(){
 
   $('#uploadCampaignPatch')?.addEventListener('click',async()=>{
     const file=$('#campaignPatchFile')?.files?.[0],message=$('#campaignPatchMessage');
-    if(!file)return message&&(message.textContent='Choose an image first.');
-    if(!['image/png','image/jpeg','image/webp'].includes(file.type))return message&&(message.textContent='Use PNG, JPG or WebP.');
-    if(file.size>2*1024*1024)return message&&(message.textContent='Patch must be 2 MB or smaller.');
     try{
-      if(message)message.textContent='Uploading patch…';
-      const ref=storageRef(storage,`campaignPatches/${crewSlug}/patch`);
-      await uploadBytes(ref,file,{contentType:file.type});
-      const url=await getDownloadURL(ref);
+      if(message)message.textContent='Preparing patch…';
+      const url=await compressPatchFile(file);
+      if(message)message.textContent='Saving patch…';
       await updateDoc(doc(db,'ufnCampaignCrews',crewSlug),{patchUrl:url,patchUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()});
       crew.patchUrl=url;
-      if(message)message.textContent='Patch uploaded ✓';
+      if(message)message.textContent='Patch saved ✓';
       box.remove();renderPatchSettings();applyPatchVisuals();
-    }catch(err){if(message)message.textContent=`Upload failed: ${err.message}`;}
+    }catch(err){if(message)message.textContent=`Could not save patch: ${err.message}`;}
   });
 
   $('#removeCampaignPatch')?.addEventListener('click',async()=>{
@@ -217,7 +250,6 @@ function renderPatchSettings(){
     const message=$('#campaignPatchMessage');
     try{
       if(message)message.textContent='Removing patch…';
-      await deleteObject(storageRef(storage,`campaignPatches/${crewSlug}/patch`)).catch(()=>{});
       await updateDoc(doc(db,'ufnCampaignCrews',crewSlug),{patchUrl:'',patchUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()});
       crew.patchUrl='';
       box.remove();renderPatchSettings();applyPatchVisuals();

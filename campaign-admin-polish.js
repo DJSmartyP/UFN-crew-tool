@@ -5,12 +5,11 @@ import {
   getFirestore, collection, doc, getDoc, getDocs, onSnapshot, query, where,
   updateDoc, setDoc, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-storage.js';
 
 const params=new URLSearchParams(location.search);
 const adminCrew=String(params.get('adminCrew')||'').trim();
 const app=getApps().find(a=>a.name==='[DEFAULT]')||initializeApp(firebaseConfig);
-const auth=getAuth(app),db=getFirestore(app),storage=getStorage(app);
+const auth=getAuth(app),db=getFirestore(app);
 const main=document.querySelector('#main'),topActions=document.querySelector('#topActions');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dateText=v=>{if(!v)return 'Date not set';const [y,m,d]=String(v).split('-').map(Number);return new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(y,m-1,d)));};
@@ -18,6 +17,46 @@ const playerUrl=id=>`${location.origin}${location.pathname}?m=${encodeURICompone
 const adminCrewUrl=id=>`${location.pathname}?campaigns=1&adminCrew=${encodeURIComponent(id)}`;
 let archivedCrewIds=new Set();
 let archivedDeploymentIds=new Set();
+
+
+function loadPatchImage(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error('Could not read that image.'));
+    reader.onload=()=>{
+      const img=new Image();
+      img.onerror=()=>reject(new Error('That image could not be opened.'));
+      img.onload=()=>resolve(img);
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function compressPatchFile(file){
+  if(!file)throw new Error('Choose an image first.');
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type))throw new Error('Use PNG, JPG or WebP.');
+  if(file.size>8*1024*1024)throw new Error('Choose an image smaller than 8 MB. It will be compressed before saving.');
+  const img=await loadPatchImage(file);
+  let maxEdge=256,quality=.84;
+  for(let attempt=0;attempt<6;attempt++){
+    const scale=Math.min(1,maxEdge/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height));
+    const width=Math.max(1,Math.round((img.naturalWidth||img.width)*scale));
+    const height=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));
+    const canvas=document.createElement('canvas');
+    canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext('2d');
+    if(!ctx)throw new Error('This browser could not prepare the patch image.');
+    ctx.clearRect(0,0,width,height);
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    ctx.drawImage(img,0,0,width,height);
+    const dataUrl=canvas.toDataURL('image/webp',quality);
+    // Keep plenty of headroom below Firestore's 1 MiB document limit.
+    if(dataUrl.length<=180000)return dataUrl;
+    maxEdge=Math.max(128,Math.round(maxEdge*.82));
+    quality=Math.max(.58,quality-.07);
+  }
+  throw new Error('The patch could not be compressed enough. Try a simpler or smaller image.');
+}
 
 async function archiveCrew(id,name){
   if(!confirm(`Archive ${name}? Its deployments will remain in the archive and the crew will disappear from the public crew list.`))return;
@@ -108,13 +147,9 @@ async function editDeployment(d){
 }
 
 async function uploadAdminPatch(c,file,message){
-  if(!file)throw new Error('Choose an image first.');
-  if(!['image/png','image/jpeg','image/webp'].includes(file.type))throw new Error('Use PNG, JPG or WebP.');
-  if(file.size>2*1024*1024)throw new Error('Patch must be 2 MB or smaller.');
-  if(message)message.textContent='Uploading patch…';
-  const ref=storageRef(storage,`campaignPatches/${c.id}/patch`);
-  await uploadBytes(ref,file,{contentType:file.type});
-  const url=await getDownloadURL(ref);
+  if(message)message.textContent='Preparing patch…';
+  const url=await compressPatchFile(file);
+  if(message)message.textContent='Saving patch…';
   await updateDoc(doc(db,'ufnCampaignCrews',c.id),{patchUrl:url,patchUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()});
 }
 
@@ -137,7 +172,7 @@ async function renderAdminCrewHub(slug){
       <div class="campaign-dashboard-actions"><button id="adminRenameCrew" class="btn ghost">Rename crew</button><button id="adminArchiveCrew" class="btn ghost">Archive crew</button></div>
     </div>
     <section class="panel admin-patch-panel">
-      <div><div class="eyebrow">Crew patch</div><h3>${c.patchUrl?'Replace patch':'Upload patch'}</h3><p class="sub">PNG, JPG or WebP, maximum 2 MB.</p></div>
+      <div><div class="eyebrow">Crew patch</div><h3>${c.patchUrl?'Replace patch':'Upload patch'}</h3><p class="sub">PNG, JPG or WebP. The browser resizes and compresses it before saving to Firestore.</p></div>
       <div class="admin-patch-controls"><input id="adminPatchFile" type="file" accept="image/png,image/jpeg,image/webp"><button id="adminUploadPatch" class="btn primary">${c.patchUrl?'Replace patch':'Upload patch'}</button>${c.patchUrl?'<button id="adminRemovePatch" class="btn ghost">Remove patch</button>':''}</div>
       <div id="adminPatchMessage" class="message"></div>
     </section>
@@ -163,7 +198,6 @@ async function renderAdminCrewHub(slug){
     if(!confirm('Remove this campaign crew patch?'))return;
     const message=document.querySelector('#adminPatchMessage');
     try{
-      await deleteObject(storageRef(storage,`campaignPatches/${c.id}/patch`)).catch(()=>{});
       await updateDoc(doc(db,'ufnCampaignCrews',c.id),{patchUrl:'',patchUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()});
       await renderAdminCrewHub(slug);
     }catch(err){if(message)message.textContent=err.message;}
