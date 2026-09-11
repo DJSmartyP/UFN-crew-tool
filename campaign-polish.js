@@ -61,6 +61,21 @@ function applyPatchVisuals(){
   const url=crew?.patchUrl||'';
   setPatchVisual(document.querySelector('.deployment-factions'),url,`${crew?.name||'Campaign crew'} patch`);
 
+  // Use the campaign patch as the card artwork, matching the faction-art
+  // treatment on standard deployments. No patch = no placeholder.
+  document.querySelectorAll('#deployments .campaign-deployment-card').forEach(card=>{
+    let img=card.querySelector('img.campaign-card-patch');
+    if(url){
+      if(!img){
+        img=document.createElement('img');
+        img.className='campaign-card-patch';
+        card.appendChild(img);
+      }
+      if(img.getAttribute('src')!==url)img.setAttribute('src',url);
+      img.setAttribute('alt',`${crew?.name||'Campaign crew'} patch`);
+    }else img?.remove();
+  });
+
   const head=document.querySelector('.campaign-dashboard-head');
   if(head){
     let holder=head.querySelector('.campaign-hub-patch');

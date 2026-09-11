@@ -146,6 +146,7 @@ async function renderAdminCrewHub(slug){
     <div id="adminCrewDeployments" class="campaign-deployment-grid">${ds.length?ds.map(d=>`
       <section class="panel mission-card campaign-deployment-card">
         <div class="campaign-card-badges"><span class="pill campaign-type">Campaign Crew Deployment</span></div>
+        ${c.patchUrl?`<img class="campaign-card-patch" src="${esc(c.patchUrl)}" alt="${esc(c.name||c.id)} patch">`:''}
         <div class="mission-date">${esc(dateText(d.date))}</div><h3>${esc(d.title||'UFN Deployment')}</h3>
         <div class="mission-meta"><span class="pill ${d.closed?'closed':'open'}">${d.closed?'Choices closed':'Choices open'}</span><span class="pill">${Number(d.responseCount||0)}/6 responses</span></div>
         <div class="share-box"><input readonly value="${esc(playerUrl(d.id))}"><button class="btn ghost tiny" data-admin-copy="${esc(d.id)}">Copy player link</button></div>

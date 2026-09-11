@@ -94,3 +94,16 @@
   .admin-patch-controls{justify-content:flex-start}
   .admin-crew-heading{align-items:flex-start}
 }
+
+/* Campaign patch artwork on deployment tiles */
+.campaign-deployment-card{position:relative;overflow:hidden}
+.campaign-deployment-card .campaign-card-patch{
+  position:absolute;right:16px;bottom:16px;width:76px;height:76px;object-fit:contain;
+  border-radius:16px;background:rgba(0,0,0,.20);padding:5px;pointer-events:none;
+  filter:drop-shadow(0 8px 14px rgba(0,0,0,.28));
+}
+.campaign-deployment-card:has(.campaign-card-patch){padding-right:108px}
+@media(max-width:640px){
+  .campaign-deployment-card .campaign-card-patch{width:64px;height:64px;right:14px;bottom:14px}
+  .campaign-deployment-card:has(.campaign-card-patch){padding-right:92px}
+}
