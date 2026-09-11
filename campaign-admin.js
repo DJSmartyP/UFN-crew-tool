@@ -12,6 +12,7 @@ import {
 const $ = s => document.querySelector(s);
 const main = $('#main');
 const topActions = $('#topActions');
+const adminCrewParam = new URLSearchParams(location.search).get('adminCrew');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slugify = s => String(s || '').normalize('NFKD').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50);
 const app = getApps().find(a => a.name === '[DEFAULT]') || initializeApp(firebaseConfig);
@@ -69,7 +70,7 @@ onAuthStateChanged(auth, user => {
   if (!user) return renderLogin();
   if (user.uid !== ADMIN_UID) return renderWrongAccount();
   renderTop();
-  renderCampaignAdmin();
+  if (!adminCrewParam) renderCampaignAdmin();
 });
 
 function renderTop(){
@@ -101,7 +102,7 @@ async function renderCampaignAdmin(){
   }
 }
 function renderCrewCard(c){
-  return `<details class="panel campaign-card campaign-crew-accordion" data-crew-card="${esc(c.id)}"><summary><div class="campaign-summary-main"><div><div class="eyebrow">Campaign crew</div><h2>${esc(c.name||c.id)}</h2></div><div class="campaign-summary-meta"><span class="pill ${c.active===false?'closed':'open'}">${c.active===false?'Disabled':'Active'}</span><span class="pill">Password v${Number(c.passwordVersion||1)}</span><span class="campaign-chevron">⌄</span></div></div></summary><div class="campaign-accordion-body"><div class="actions campaign-admin-actions"><a class="btn primary" href="${esc(crewUrl(c.id))}">Open hub</a><button class="btn ghost" data-reset-password="${esc(c.id)}">Set new password</button><button class="btn ${c.active===false?'success':'danger'}" data-toggle-crew="${esc(c.id)}">${c.active===false?'Enable':'Disable'}</button></div><div class="campaign-divider"></div><div class="panel-heading-actions"><div><div class="eyebrow">Campaign Crew Deployments</div><h3>Deployments</h3></div></div><div class="campaign-deployment-grid" data-crew-deployments="${esc(c.id)}"><section class="loading-card"><p>Open this crew to load deployments…</p></section></div></div></details>`;
+  return `<details class="panel campaign-card campaign-crew-accordion" data-crew-card="${esc(c.id)}"><summary><div class="campaign-summary-main"><div><div class="eyebrow">Campaign crew</div><h2>${esc(c.name||c.id)}</h2></div><div class="campaign-summary-meta"><span class="pill ${c.active===false?'closed':'open'}">${c.active===false?'Disabled':'Active'}</span><span class="pill">Password v${Number(c.passwordVersion||1)}</span><span class="campaign-chevron">⌄</span></div></div></summary><div class="campaign-accordion-body"><div class="actions campaign-admin-actions"><a class="btn primary" href="${location.pathname}?campaigns=1&adminCrew=${encodeURIComponent(c.id)}">Open admin hub</a><button class="btn ghost" data-reset-password="${esc(c.id)}">Set new password</button><button class="btn ${c.active===false?'success':'danger'}" data-toggle-crew="${esc(c.id)}">${c.active===false?'Enable':'Disable'}</button></div><div class="campaign-divider"></div><div class="panel-heading-actions"><div><div class="eyebrow">Campaign Crew Deployments</div><h3>Deployments</h3></div></div><div class="campaign-deployment-grid" data-crew-deployments="${esc(c.id)}"><section class="loading-card"><p>Open this crew to load deployments…</p></section></div></div></details>`;
 }
 function bindCrewCard(c){
   const card=document.querySelector(`[data-crew-card="${CSS.escape(c.id)}"]`);

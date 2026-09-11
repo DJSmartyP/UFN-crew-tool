@@ -1,0 +1,29 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return signedIn() && request.auth.uid == "tG8hNmlYRSd9RBiHe6WUEWFeZ173";
+    }
+    function isCampaignCrew(crewSlug) {
+      return signedIn()
+        && firestore.exists(/databases/(default)/documents/ufnCampaignCrews/$(crewSlug))
+        && firestore.get(/databases/(default)/documents/ufnCampaignCrews/$(crewSlug)).data.active == true
+        && firestore.get(/databases/(default)/documents/ufnCampaignCrews/$(crewSlug)).data.authUid == request.auth.uid;
+    }
+
+    match /campaignPatches/{crewSlug}/{fileName} {
+      allow read: if true;
+      allow write: if (isAdmin() || isCampaignCrew(crewSlug))
+        && (
+          request.resource == null
+          || (
+            request.resource.size <= 2 * 1024 * 1024
+            && request.resource.contentType.matches('image/(png|jpeg|webp)')
+          )
+        );
+    }
+  }
+}

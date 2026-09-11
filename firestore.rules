@@ -146,6 +146,13 @@ service cloud.firestore {
         && request.resource.data.authUid is string
         && request.resource.data.authEmail is string
         && request.resource.data.passwordVersion == resource.data.passwordVersion + 1
+      ) || (
+        signedIn()
+        && resource.data.active == true
+        && resource.data.authUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "patchUrl", "patchUpdatedAt", "updatedAt"
+        ])
       );
     }
 
