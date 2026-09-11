@@ -1,36 +1,20 @@
-# UFN campaign patch: Firestore-only update
+# UFN navigation + admin campaign deployment update
 
-This update removes the Firebase Storage dependency completely.
+Replace:
+- router.js
+- admin-separation.js
+- campaign.css
 
-## Replace in GitHub
+Add:
+- navigation-polish.js
+- campaign-admin-create.js
 
-- `campaign-polish.js`
-- `campaign-admin-polish.js`
-- `campaign.css` (included so this delta also retains the bottom-right patch artwork on campaign deployment cards)
+No Firebase rule changes are required.
 
-No `storage.rules` file is needed and Firebase Storage does **not** need to be enabled.
-
-## How patches are stored
-
-When a campaign crew or admin chooses a PNG/JPG/WebP image, the browser:
-
-1. opens it locally;
-2. scales it down to a maximum edge of 256 px;
-3. compresses it to WebP;
-4. keeps the final data well below the Firestore document limit;
-5. stores that small data URL in the existing `patchUrl` field on the campaign crew document.
-
-The original full-size image is never uploaded.
-
-## Firebase rules
-
-If you already published the Firestore rules from the earlier Admin Hub / Archive / Crew Patch update, **do not change them**. Those rules already allow an authenticated campaign crew to update its own `patchUrl` field.
-
-If you never published those earlier Firestore rules, publish the `firestore.rules` from that earlier update first. This small delta does not otherwise require a rules change.
-
-## What remains unchanged
-
-- Admin hub bypasses the campaign password.
-- Archive behaviour remains in place.
-- Player registration/assignment logic is untouched.
-- Campaign patches still appear on campaign pages, player pages and in the bottom-right of campaign deployment cards.
+Changes:
+- Consistent admin navigation: Deployments / Campaign crews / Crew access / Archive / Sign out.
+- Clear back navigation on campaign hubs and deployment management screens.
+- Campaign player pages now have a back link to the crew hub.
+- Campaign patch replaces the generic UFN roundel on campaign player deployment banners when a patch exists.
+- The generic UFN roundel remains as the fallback when no patch exists.
+- UFN admin can create campaign deployments directly from an admin crew hub, including deployment name, date and custom player link.

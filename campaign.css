@@ -107,3 +107,26 @@
   .campaign-deployment-card .campaign-card-patch{width:64px;height:64px;right:14px;bottom:14px}
   .campaign-deployment-card:has(.campaign-card-patch){padding-right:92px}
 }
+
+/* Unified navigation */
+.unified-nav-host{width:100%}
+.unified-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;flex-wrap:wrap}
+.unified-nav-links,.unified-nav-account{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.unified-nav .nav-link{white-space:nowrap}
+.unified-nav .nav-active,
+.unified-nav .nav-current{
+  display:inline-flex;align-items:center;min-height:34px;padding:0 13px;border-radius:10px;
+  border:1px solid rgba(88,168,255,.42);background:rgba(88,168,255,.12);
+  font-family:inherit;font-weight:700;letter-spacing:.02em
+}
+.unified-nav .nav-current{cursor:default}
+.campaign-player-patch{
+  width:112px;height:112px;object-fit:contain;border-radius:20px;
+  background:rgba(0,0,0,.18);padding:7px;
+  filter:drop-shadow(0 10px 18px rgba(0,0,0,.30))
+}
+@media(max-width:760px){
+  .unified-nav{align-items:flex-start}
+  .unified-nav-account{width:100%;justify-content:flex-start}
+  .campaign-player-patch{width:88px;height:88px}
+}
