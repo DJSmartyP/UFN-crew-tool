@@ -130,3 +130,32 @@
   .unified-nav-account{width:100%;justify-content:flex-start}
   .campaign-player-patch{width:88px;height:88px}
 }
+
+/* 4- and 5-player short-crew assignments */
+.short-crew-summary{
+  margin:0 14px 8px;
+  padding:8px 10px;
+  border:1px solid rgba(233,185,73,.28);
+  border-radius:10px;
+  background:rgba(233,185,73,.08);
+  font-size:.82rem;
+  line-height:1.35;
+}
+.station.short-crew-combined{
+  box-shadow:inset 0 0 0 1px rgba(233,185,73,.22);
+}
+.short-crew-note{
+  color:rgba(255,255,255,.72);
+}
+.short-crew-player-summary{
+  margin:8px 0 12px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:rgba(233,185,73,.10);
+  border:1px solid rgba(233,185,73,.25);
+  font-weight:700;
+}
+.pill.short-crew-pill{
+  border-color:rgba(233,185,73,.38);
+  background:rgba(233,185,73,.10);
+}

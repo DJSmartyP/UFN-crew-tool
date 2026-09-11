@@ -17,3 +17,4 @@ if (params.has('archive')) {
 }
 
 await import('./navigation-polish.js');
+await import('./short-crew-planner.js');
