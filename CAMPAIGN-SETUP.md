@@ -75,6 +75,11 @@ The resulting campaign URL will look like:
 
 Anyone with the URL still needs the shared campaign password.
 
+
+## Campaign deployment limit
+
+Campaign crews are intentionally limited to **one UFN ship per deployment**, with a maximum of **6 players**. The campaign UI does not offer a two-ship option, and the supplied Firestore rules enforce `shipCount == 1` for campaign-created or campaign-edited deployments. The master administrator's normal UFN deployment system keeps its existing one- or two-ship capability.
+
 ## Password security
 
 ### What is secure in this build

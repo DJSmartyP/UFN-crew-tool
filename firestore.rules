@@ -170,6 +170,8 @@ service cloud.firestore {
           signedIn()
           && request.resource.data.campaignCrew is string
           && isCampaignCrewAuth(request.resource.data.campaignCrew)
+          && request.resource.data.shipCount == 1
+          && request.resource.data.ghostShipName == ""
         );
 
       allow delete: if isAdmin()
@@ -185,12 +187,14 @@ service cloud.firestore {
           && resource.data.campaignCrew is string
           && isCampaignCrewAuth(resource.data.campaignCrew)
           && request.resource.data.campaignCrew == resource.data.campaignCrew
+          && request.resource.data.shipCount == 1
+          && request.resource.data.ghostShipName == ""
         )
         || (
           isAnonymousUser()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["responseCount", "updatedAt"])
           && request.resource.data.responseCount == resource.data.responseCount + 1
-          && request.resource.data.responseCount <= (resource.data.shipCount == 2 ? 12 : 6)
+          && request.resource.data.responseCount <= (resource.data.campaignCrew is string ? 6 : (resource.data.shipCount == 2 ? 12 : 6))
         );
 
       match /players/{playerId} {
