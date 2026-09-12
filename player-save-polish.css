@@ -1,0 +1,11 @@
+
+/* Persistent player save confirmation */
+.player-save-persistent{
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(89,201,138,.34);
+  background:rgba(89,201,138,.09);
+  color:#dff8e9;
+  font-weight:700;
+}
