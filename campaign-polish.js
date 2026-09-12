@@ -96,22 +96,13 @@ function setPatchVisual(container,url,alt){
 
 function applyPatchVisuals(){
   const url=crew?.patchUrl||'';
+
+  // Deployment management/player-style banner: use the campaign patch when present.
   setPatchVisual(document.querySelector('.deployment-factions'),url,`${crew?.name||'Campaign crew'} patch`);
 
-  // Use the campaign patch as the card artwork, matching the faction-art
-  // treatment on standard deployments. No patch = no placeholder.
-  document.querySelectorAll('#deployments .campaign-deployment-card').forEach(card=>{
-    let img=card.querySelector('img.campaign-card-patch');
-    if(url){
-      if(!img){
-        img=document.createElement('img');
-        img.className='campaign-card-patch';
-        card.appendChild(img);
-      }
-      if(img.getAttribute('src')!==url)img.setAttribute('src',url);
-      img.setAttribute('alt',`${crew?.name||'Campaign crew'} patch`);
-    }else img?.remove();
-  });
+  // On the campaign crew hub the large page-level patch is the identity mark,
+  // so do not duplicate it on every deployment tile.
+  document.querySelectorAll('#deployments .campaign-deployment-card img.campaign-card-patch').forEach(img=>img.remove());
 
   const head=document.querySelector('.campaign-dashboard-head');
   if(head){
@@ -123,7 +114,9 @@ function applyPatchVisuals(){
         head.appendChild(holder);
       }
       const img=holder.querySelector('img');
-      if(!img||img.getAttribute('src')!==url)holder.innerHTML=`<img src="${esc(url)}" alt="${esc(crew?.name||'Campaign crew')} patch">`;
+      if(!img||img.getAttribute('src')!==url){
+        holder.innerHTML=`<img src="${esc(url)}" alt="${esc(crew?.name||'Campaign crew')} patch">`;
+      }
     }else holder?.remove();
   }
 }
@@ -279,5 +272,25 @@ onAuthStateChanged(auth,async user=>{
   }catch{}
 });
 
+let applyPending=false;
+function scheduleApplyUi(){
+  if(applyPending)return;
+  applyPending=true;
+  requestAnimationFrame(()=>{
+    applyPending=false;
+    applyUi();
+  });
+}
+
 applyUi();
-new MutationObserver(applyUi).observe(document.body,{childList:true,subtree:true});
+
+// Watch page content for dashboard/manage redraws.
+const campaignMain=document.querySelector('#main');
+if(campaignMain){
+  new MutationObserver(scheduleApplyUi).observe(campaignMain,{childList:true,subtree:true});
+}
+
+// Campaign settings / deployment modals are appended directly to body.
+// Observe only direct body children so edits inside a modal do not recursively
+// trigger the polish pass.
+new MutationObserver(scheduleApplyUi).observe(document.body,{childList:true,subtree:false});

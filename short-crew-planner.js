@@ -16,6 +16,7 @@ const ROLES=[
 const ROLE_BY_NAME=new Map(ROLES.map(r=>[r.name,r]));
 const FLEX='__FLEX__';
 const params=new URLSearchParams(location.search);
+const main=document.querySelector('#main');
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -199,6 +200,21 @@ function shortCrewPatterns(ship,count){
   return [];
 }
 
+function preferredCaptainExtra(p){
+  const prefs=(p.prefs||[]).filter(Boolean);
+  const captainIndex=prefs.indexOf('Captain');
+
+  // If Captain is ranked, prefer the next ranked station after Captain.
+  // If Captain is last/unranked, fall back to the player's highest-ranked
+  // concrete non-Captain station.
+  if(captainIndex>=0){
+    for(let i=captainIndex+1;i<prefs.length;i++){
+      if(prefs[i]!==FLEX&&prefs[i]!=='Captain')return prefs[i];
+    }
+  }
+  return prefs.find(role=>role!==FLEX&&role!=='Captain')||'';
+}
+
 function bundleCost(p,bundle,d,index){
   const o=overrideFor(d,p.id);
   if(o.shipId&&o.shipId!==bundle.shipId)return Infinity;
@@ -206,6 +222,16 @@ function bundleCost(p,bundle,d,index){
 
   let cost=0;
   for(const role of bundle.roles)cost+=quality(p,role).cost;
+
+  // When someone is Captain + another station, strongly favour their next
+  // ranked station as the second role. This is deliberately a preference,
+  // not an absolute rule: a seriously worse overall crew plan can still win.
+  if(bundle.roles.includes('Captain')&&bundle.roles.length>1){
+    const extra=bundle.roles.find(role=>role!=='Captain')||'';
+    const preferred=preferredCaptainExtra(p);
+    if(preferred&&extra!==preferred)cost+=4500;
+  }
+
   if(p.shipPref&&p.shipPref!==bundle.shipId)cost+=20;
   cost+=index*0.00001;
   return cost;
@@ -473,6 +499,7 @@ function applyResponseEditor(){
 
   let note=box.querySelector('.short-crew-player-summary');
   if(roles.length>1){
+    const wanted=`Combined assignment: ${roles.join(' + ')}`;
     if(!note){
       note=document.createElement('div');
       note.className='short-crew-player-summary';
@@ -480,7 +507,7 @@ function applyResponseEditor(){
       if(assignment)assignment.after(note);
       else box.prepend(note);
     }
-    note.textContent=`Combined assignment: ${roles.join(' + ')}`;
+    if(note.textContent!==wanted)note.textContent=wanted;
   }else{
     note?.remove();
   }
@@ -495,7 +522,19 @@ function applyResponseStats(){
       .filter(a=>Array.isArray(a.bundleRoles)&&a.bundleRoles.length>1)
       .map(a=>a.playerId)
   ).size;
-  stats.innerHTML=`<span class="pill">${state.players.length}/${capFor(state.deployment)} responses</span><span class="pill">${first} first-choice station matches</span>${combined?`<span class="pill short-crew-pill">${combined} multi-station crew</span>`:''}`;
+  const wanted=`<span class="pill">${state.players.length}/${capFor(state.deployment)} responses</span><span class="pill">${first} first-choice station matches</span>${combined?`<span class="pill short-crew-pill">${combined} multi-station crew</span>`:''}`;
+
+  // Critical: do not rewrite identical markup. The previous unconditional
+  // innerHTML assignment triggered the MutationObserver again forever.
+  if(stats.innerHTML!==wanted)stats.innerHTML=wanted;
+}
+
+function planKey(admin){
+  const assignments=(state.plan?.assignments||[])
+    .map(a=>`${a.playerId}:${a.role}:${(a.bundleRoles||[]).join('+')}`)
+    .sort()
+    .join('|');
+  return `${state.deployment?.id||''}:${admin?'admin':'player'}:${state.plan?.error||''}:${assignments}`;
 }
 
 function applyPlanToPage(){
@@ -503,8 +542,18 @@ function applyPlanToPage(){
 
   document.querySelectorAll('.station-grid').forEach(grid=>{
     const admin=Boolean(grid.closest('#roster'));
-    const html=renderRoster(state.plan,state.deployment,admin);
-    if(grid.outerHTML!==html)grid.outerHTML=html;
+    const key=planKey(admin);
+
+    // The base app may redraw the roster after a Firestore snapshot. Replace
+    // that base roster once, then leave our own rendered roster untouched.
+    if(grid.dataset.shortCrewPlanKey===key)return;
+
+    const holder=document.createElement('div');
+    holder.innerHTML=renderRoster(state.plan,state.deployment,admin).trim();
+    const replacement=holder.firstElementChild;
+    if(!replacement)return;
+    replacement.dataset.shortCrewPlanKey=key;
+    grid.replaceWith(replacement);
   });
 
   applyResponseEditor();
@@ -610,5 +659,19 @@ function scan(){
   if(id&&id===state.id)applyPlanToPage();
 }
 
+let scanPending=false;
+function scheduleScan(){
+  if(scanPending)return;
+  scanPending=true;
+  requestAnimationFrame(()=>{
+    scanPending=false;
+    scan();
+  });
+}
+
 scan();
-new MutationObserver(scan).observe(document.body,{childList:true,subtree:true});
+
+// Only the app content needs watching. Modals are appended to <body>; watching
+// the whole document meant simply opening "Add player" repeatedly invoked the
+// crew planner even though the plan had not changed.
+if(main)new MutationObserver(scheduleScan).observe(main,{childList:true,subtree:true});

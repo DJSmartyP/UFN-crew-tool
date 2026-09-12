@@ -1,29 +1,29 @@
-# UFN admin crew hub stability fix
+# Campaign Add Player hang / user-side stability fix
 
 Replace:
-- campaign-admin.js
-- campaign-admin-polish.js
-- navigation-polish.js
+- campaign-polish.js
+- short-crew-planner.js
 - router.js
 
-No CSS, PNG assets, Firebase, Auth, Firestore data or rules changes are required.
+No CSS, Firebase, Auth, Firestore data or rules changes are required.
 
-What was wrong:
-1. campaign-admin.js wrote its own top navigation even on ?campaigns=1&adminCrew=...
-2. campaign-admin-polish.js then wrote a second admin-crew header.
-3. navigation-polish.js then replaced that with the unified bar.
-4. Multiple broad MutationObservers watched the entire document while these modules repeatedly changed UI.
+Root cause:
+- short-crew-planner.js observed the entire document.
+- On every mutation it unconditionally rewrote #responseStats.
+- Rewriting #responseStats created another mutation.
+- That created an observer feedback loop.
+- Opening the Add Player modal added further page mutations and made the loop show up as a freeze/hang.
+- campaign-polish.js also had a separate whole-document observer adding additional work.
 
-This update gives each part one owner:
-- campaign-admin.js owns the Campaign Crews list page only.
-- campaign-admin-polish.js owns the admin crew hub CONTENT only.
-- navigation-polish.js exclusively owns #topActions / the navigation bar.
-- Navigation observation is now scoped to #main and #topActions and throttled to one update per animation frame instead of watching the entire body.
+Fix:
+- Crew planner observer is now scoped to #main and throttled to one pass per animation frame.
+- Identical response stats are no longer rewritten.
+- Short-crew roster rendering uses a plan signature so it only replaces the roster when the underlying plan or base render actually changed.
+- Campaign polish watches #main plus direct body children only, so opening/editing a modal does not create recursive polish passes.
+- Both affected modules are cache-busted in router.js.
 
-Also retained:
-- Full admin nav on Crew Access for the signed-in master admin.
-- Crew Access highlighted while there.
-- Back to Campaign Crews on an admin crew hub.
-- Back to Deployments / Back to Crew Hub contextual navigation where relevant.
-
-The router includes a fresh cache-bust for all three affected modules.
+Also retained from the intended latest planner:
+- 5-player Captain takes a second station.
+- 4-player Helm + Weapons are combined and Captain takes a second station.
+- Captain's next ranked station is strongly preferred for their additional role.
+- Large campaign patch on the crew hub; no repeated patch on each hub deployment tile.
