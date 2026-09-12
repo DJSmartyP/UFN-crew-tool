@@ -31,3 +31,44 @@
   margin-top:12px;
   flex-wrap:wrap;
 }
+
+/* Repaired direct deployment management layout */
+.admin-direct-head{
+  align-items:center;
+}
+.admin-direct-layout{
+  display:grid;
+  grid-template-columns:minmax(300px,.72fr) minmax(520px,1.8fr);
+  gap:14px;
+  align-items:start;
+}
+.admin-direct-left{
+  display:grid;
+  gap:14px;
+}
+.admin-direct-plan-panel{
+  min-height:100%;
+}
+.admin-direct-responses-panel{
+  margin-top:14px;
+}
+.admin-direct-player-main{
+  display:grid;
+  gap:8px;
+}
+.admin-direct-pref-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.admin-direct-roster{
+  margin-top:12px;
+}
+.admin-direct-roster .ship-card{
+  width:100%;
+}
+@media(max-width:960px){
+  .admin-direct-layout{
+    grid-template-columns:1fr;
+  }
+}

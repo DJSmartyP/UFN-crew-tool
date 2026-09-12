@@ -1,24 +1,21 @@
-# Player save reliability fix
+# Direct admin deployment page repair
 
 Replace:
+- campaign-admin-polish.js
+- campaign-admin-create.js
+- admin-direct-deployment.css
 - router.js
-- short-crew-planner.js
-- campaign-polish.js
 
-Add:
-- player-save-polish.js
-- player-save-polish.css
+What this fixes:
+- Removes the stray 'Create deployment' button from an individual deployment page.
+- Keeps Create Deployment only on the crew hub.
+- Rebuilds the direct admin deployment page as a real management screen.
+- Restores a visible six-station crew plan: Captain, Helm, Weapons, Engineering, Science, Relay.
+- Applies the 4/5-player combined-station rules in the direct admin view.
+- Captain's additional station honours their next preference where practical.
+- Replaces raw __FLEX__ values with 'No preference / fill a gap'.
+- Keeps Edit Details, Open Player Page, Copy Link and Archive.
+- Saving deployment edits returns to the deployment page rather than kicking admin back to the crew hub.
+- Uses the existing unified nav for Back to Crew Hub, so the page no longer duplicates that control.
 
-Why:
-- The live repo was still loading the old short-crew planner with a whole-document MutationObserver feedback loop.
-- That could monopolise the page during player registration and make Firestore saves appear to hang.
-- The base app's success message was also immediately destroyed by its own rerender, so even a successful write could look like it had failed.
-
-What changes:
-- Installs the scoped/throttled short-crew observer fix.
-- Installs the scoped/throttled campaign polish observer fix.
-- Adds a save-in-progress state to the player form.
-- Adds a persistent success banner after Firestore's player snapshot confirms the saved player record.
-- Cache-busts the affected modules.
-
-No Firestore rules changes are required: the current rules already permit an authenticated anonymous player to create/update their own UFN player record and name claim.
+No Firebase/Auth/Firestore/rules changes are required.

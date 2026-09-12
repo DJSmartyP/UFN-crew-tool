@@ -20,6 +20,150 @@ const adminDeploymentUrl=(crewId,depId)=>`${location.pathname}?campaigns=1&admin
 let archivedCrewIds=new Set();
 let archivedDeploymentIds=new Set();
 
+const FLEX='__FLEX__';
+const FLEX_LABEL='No preference / fill a gap';
+const DIRECT_ROLES=[
+  {name:'Captain',colour:'command'},
+  {name:'Helm',colour:'helm'},
+  {name:'Weapons',colour:'weapons'},
+  {name:'Engineering',colour:'engineering'},
+  {name:'Science',colour:'science'},
+  {name:'Relay',colour:'relay'}
+];
+
+function prefLabel(value){
+  return value===FLEX?FLEX_LABEL:String(value||'');
+}
+function roleClass(role){
+  return `role-${String(role||'').replace(/[^A-Za-z]/g,'')}`;
+}
+function directQuality(p,role){
+  if((p.dislikes||[]).includes(role))return{cost:100000,label:"Really don't want"};
+  for(let i=0;i<3;i++){
+    const pref=p.prefs?.[i];
+    if(pref===FLEX)return{cost:5000,label:'Happy to fill a gap'};
+    if(pref===role)return{cost:[0,100,500][i],label:`${i+1}${i===0?'st':i===1?'nd':'rd'} choice`,rank:i+1};
+  }
+  return{cost:8000,label:'Other available station'};
+}
+function directPreferredCaptainExtra(p){
+  const prefs=(p.prefs||[]).filter(Boolean);
+  const captainIndex=prefs.indexOf('Captain');
+  if(captainIndex>=0){
+    for(let i=captainIndex+1;i<prefs.length;i++){
+      if(prefs[i]!==FLEX&&prefs[i]!=='Captain')return prefs[i];
+    }
+  }
+  return prefs.find(role=>role!==FLEX&&role!=='Captain')||'';
+}
+function directBundles(count){
+  if(count===5){
+    return DIRECT_ROLES.filter(r=>r.name!=='Captain').map(extra=>{
+      const bundles=[['Captain',extra.name]];
+      DIRECT_ROLES.filter(r=>r.name!=='Captain'&&r.name!==extra.name).forEach(r=>bundles.push([r.name]));
+      return bundles;
+    });
+  }
+  if(count===4){
+    return ['Engineering','Science','Relay'].map(extra=>{
+      const bundles=[['Captain',extra],['Helm','Weapons']];
+      ['Engineering','Science','Relay'].filter(r=>r!==extra).forEach(r=>bundles.push([r]));
+      return bundles;
+    });
+  }
+  return [DIRECT_ROLES.map(r=>[r.name]).slice(0,count)];
+}
+function directBundleCost(p,roles,index){
+  let cost=roles.reduce((sum,role)=>sum+directQuality(p,role).cost,0)+index*0.00001;
+  if(roles.includes('Captain')&&roles.length>1){
+    const extra=roles.find(r=>r!=='Captain')||'';
+    const preferred=directPreferredCaptainExtra(p);
+    if(preferred&&extra!==preferred)cost+=4500;
+  }
+  return cost;
+}
+function solveDirectCrew(players){
+  const n=players.length;
+  if(!n)return{assignments:[],error:''};
+
+  // Small crew sizes: brute-force bundle assignment. At max 6 this is tiny,
+  // deterministic, and keeps this admin view self-contained.
+  let patterns;
+  if(n===4||n===5)patterns=directBundles(n);
+  else{
+    const roles=DIRECT_ROLES.map(r=>r.name);
+    patterns=[roles.slice(0,n).map(r=>[r])];
+  }
+
+  let best=null;
+  for(const bundles of patterns){
+    if(bundles.length!==n)continue;
+    const used=Array(n).fill(false);
+    const picks=Array(n);
+    function walk(i,total){
+      if(best&&total>=best.cost)return;
+      if(i===n){
+        best={cost:total,picks:picks.map(x=>x.slice())};
+        return;
+      }
+      for(let j=0;j<n;j++){
+        if(used[j])continue;
+        used[j]=true;
+        picks[i]=bundles[j];
+        walk(i+1,total+directBundleCost(players[i],bundles[j],i));
+        used[j]=false;
+      }
+    }
+    walk(0,0);
+  }
+
+  if(!best)return{assignments:[],error:'Could not build the current crew plan.'};
+
+  const assignments=[];
+  players.forEach((p,i)=>{
+    const roles=best.picks[i];
+    roles.forEach(role=>assignments.push({
+      playerId:p.id,
+      name:p.name,
+      role,
+      quality:directQuality(p,role),
+      combinedLabel:roles.length>1
+        ? role==='Captain'
+          ? `Also: ${roles.filter(r=>r!=='Captain').join(' + ')}`
+          : roles.includes('Captain')
+            ? 'Combined with Captain'
+            : `Combined with ${roles.filter(r=>r!==role).join(' + ')}`
+        : ''
+    }));
+  });
+  return{assignments,error:''};
+}
+function renderDirectRoster(players){
+  const plan=solveDirectCrew(players);
+  const map=new Map(plan.assignments.map(a=>[a.role,a]));
+  return `<div class="station-grid one admin-direct-roster">
+    <section class="ship-card">
+      <div class="ship-brand">
+        <div class="ship-brand-copy">
+          <div class="eyebrow">Campaign crew</div>
+          <div class="ship-title">Current crew plan</div>
+          <div class="faction-strap">LIVE ADMIN VIEW</div>
+        </div>
+        <span class="pill ufn">${players.length}/6 crew</span>
+      </div>
+      ${DIRECT_ROLES.map(r=>{
+        const a=map.get(r.name);
+        const note=a?[a.combinedLabel,a.quality?.label].filter(Boolean).join(' · '):'';
+        return `<div class="station ${roleClass(r.name)}${a?.combinedLabel?' short-crew-combined':''}">
+          <div class="station-role">${r.name}</div>
+          <div class="station-name">${a?esc(a.name):'<span class="sub">To be decided</span>'}</div>
+          ${note?`<div class="station-note">${esc(note)}</div>`:''}
+        </div>`;
+      }).join('')}
+    </section>
+  </div>${plan.error?`<div class="message error">${esc(plan.error)}</div>`:''}`;
+}
+
 
 function loadPatchImage(file){
   return new Promise((resolve,reject)=>{
@@ -179,7 +323,8 @@ async function editDeployment(d){
     try{
       await updateDoc(doc(db,'ufnDeployments',d.id),{title:wrap.querySelector('#adminDepTitle').value.trim(),date:wrap.querySelector('#adminDepDate').value,updatedAt:serverTimestamp()});
       wrap.remove();
-      await renderAdminCrewHub(d.campaignCrew);
+      if(adminDeployment&&d.id===adminDeployment)await renderAdminDeploymentPage(d.campaignCrew,d.id);
+      else await renderAdminCrewHub(d.campaignCrew);
     }catch(err){wrap.querySelector('#adminDepMsg').textContent=err.message;}
   };
 }
@@ -220,7 +365,7 @@ async function renderAdminDeploymentPage(slug,deploymentId){
     .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
 
   main.innerHTML=`
-    <div class="page-head campaign-dashboard-head">
+    <div class="page-head campaign-dashboard-head admin-direct-head">
       <div class="admin-crew-heading">
         ${c.patchUrl?`<img class="admin-crew-patch" src="${esc(c.patchUrl)}" alt="${esc(c.name||c.id)} patch">`:''}
         <div>
@@ -230,15 +375,14 @@ async function renderAdminDeploymentPage(slug,deploymentId){
         </div>
       </div>
       <div class="campaign-dashboard-actions">
-        <a class="btn ghost" href="${adminCrewUrl(slug)}">← Crew hub</a>
         <button id="adminDirectEditDeployment" class="btn primary">Edit details</button>
         <a class="btn ghost" href="${playerUrl(d.id)}" target="_blank" rel="noopener">Open player page</a>
         <button id="adminDirectArchiveDeployment" class="btn ghost">Archive</button>
       </div>
     </div>
 
-    <div class="grid two">
-      <aside>
+    <div class="admin-direct-layout">
+      <div class="admin-direct-left">
         <section class="panel">
           <div class="eyebrow">Player response link</div>
           <h2>Share link</h2>
@@ -252,7 +396,7 @@ async function renderAdminDeploymentPage(slug,deploymentId){
           </div>
         </section>
 
-        <section class="panel" style="margin-top:14px">
+        <section class="panel">
           <div class="eyebrow">Deployment details</div>
           <dl class="admin-direct-details">
             <dt>Crew</dt><dd>${esc(c.name||c.id)}</dd>
@@ -261,24 +405,33 @@ async function renderAdminDeploymentPage(slug,deploymentId){
             <dt>Status</dt><dd>${d.archived?'Archived':d.closed?'Choices closed':'Choices open'}</dd>
           </dl>
         </section>
-      </aside>
+      </div>
 
-      <section class="panel">
-        <div class="eyebrow">Registered crew</div>
-        <h2>Responses</h2>
-        <div class="admin-direct-player-list">
-          ${ps.length?ps.map(p=>`
-            <article class="admin-direct-player-row">
-              <div>
-                <strong>${esc(p.name||'Unnamed player')}</strong>
-                <div class="sub">${(p.prefs||[]).length?`Preferences: ${(p.prefs||[]).map(esc).join(' · ')}`:'No station preferences recorded'}</div>
-                ${(p.dislikes||[]).length?`<div class="sub">Really don't want: ${(p.dislikes||[]).map(esc).join(', ')}</div>`:''}
-              </div>
-            </article>`).join(''):
-            '<div class="empty-state"><h3>No responses yet</h3><p>Share the player response link to start collecting preferences.</p></div>'}
-        </div>
+      <section class="panel admin-direct-plan-panel">
+        <div class="eyebrow">Live suggestion</div>
+        <h2>Current crew plan</h2>
+        <p class="sub">All six stations remain visible. Combined stations are shown for short crews.</p>
+        ${renderDirectRoster(ps)}
       </section>
-    </div>`;
+    </div>
+
+    <section class="panel admin-direct-responses-panel">
+      <div class="eyebrow">Registered crew</div>
+      <h2>Responses</h2>
+      <div class="admin-direct-player-list">
+        ${ps.length?ps.map(p=>`
+          <article class="admin-direct-player-row">
+            <div class="admin-direct-player-main">
+              <strong>${esc(p.name||'Unnamed player')}</strong>
+              <div class="admin-direct-pref-list">
+                ${(p.prefs||[]).map((pref,i)=>`<span class="pref-tag">${i+1}. ${esc(prefLabel(pref))}</span>`).join('')}
+              </div>
+              <div class="sub">Really don't want: ${(p.dislikes||[]).length?(p.dislikes||[]).map(esc).join(', '):'None'}</div>
+            </div>
+          </article>`).join(''):
+          '<div class="empty-state"><h3>No responses yet</h3><p>Share the player response link to start collecting preferences.</p></div>'}
+      </div>
+    </section>`;
 
   document.querySelector('#adminDirectEditDeployment').onclick=()=>editDeployment(d);
   document.querySelector('#adminDirectCopyPlayerLink').onclick=async e=>{

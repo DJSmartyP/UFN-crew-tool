@@ -5,7 +5,8 @@ import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from 'https://www.
 
 const params=new URLSearchParams(location.search);
 const crewSlug=String(params.get('adminCrew')||'').trim();
-if(crewSlug){
+const adminDeployment=String(params.get('adminDeployment')||'').trim();
+if(crewSlug&&!adminDeployment){
   const app=getApps().find(a=>a.name==='[DEFAULT]')||initializeApp(firebaseConfig);
   const auth=getAuth(app),db=getFirestore(app);
 
