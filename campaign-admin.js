@@ -69,8 +69,14 @@ onAuthStateChanged(auth, user => {
   currentUser = user;
   if (!user) return renderLogin();
   if (user.uid !== ADMIN_UID) return renderWrongAccount();
-  renderTop();
-  if (!adminCrewParam) renderCampaignAdmin();
+
+  // The campaign list owns its legacy header. An individual admin crew hub is
+  // rendered by campaign-admin-polish.js and the unified navigation layer.
+  // Do not let this module overwrite that header after the hub has opened.
+  if (!adminCrewParam) {
+    renderTop();
+    renderCampaignAdmin();
+  }
 });
 
 function renderTop(){

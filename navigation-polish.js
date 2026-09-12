@@ -4,6 +4,7 @@ import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/fi
 
 const params=new URLSearchParams(location.search);
 const topActions=document.querySelector('#topActions');
+const main=document.querySelector('#main');
 const path=location.pathname;
 
 const isPlayer=params.has('m');
@@ -265,6 +266,23 @@ function applyPublic(){
   styleInPageBackButtons();
 }
 
+function watchUi(apply){
+  let pending=false;
+  const schedule=()=>{
+    if(pending)return;
+    pending=true;
+    requestAnimationFrame(()=>{
+      pending=false;
+      apply();
+    });
+  };
+
+  const observer=new MutationObserver(schedule);
+  if(main)observer.observe(main,{childList:true,subtree:true});
+  if(topActions)observer.observe(topActions,{childList:true,subtree:true});
+  return observer;
+}
+
 if(isRootAdmin||isCampaignAdmin||isArchive){
   const app=getApps().find(a=>a.name==='[DEFAULT]')||initializeApp(firebaseConfig);
   const auth=getAuth(app);
@@ -273,17 +291,16 @@ if(isRootAdmin||isCampaignAdmin||isArchive){
     const active=isRootAdmin?'deployments':isArchive?'archive':'campaigns';
     const apply=()=>renderAdminNav(active);
     apply();
-    new MutationObserver(apply).observe(document.body,{childList:true,subtree:true});
+    watchUi(apply);
   });
 }else if(isCampaignDirectory){
-  // Crew Access is shared by admins and campaign users.
-  // Keep the full admin rail when the master admin already has a valid
-  // Google session; otherwise show the simple public crew directory nav.
+  // Crew Access is both a public campaign directory and an admin destination.
+  // Preserve the full admin rail for the master admin's Google session.
   const app=getApps().find(a=>a.name==='[DEFAULT]')||initializeApp(firebaseConfig);
   const auth=getAuth(app);
   let directoryAdmin=false;
 
-  const applyDirectoryNav=()=>{
+  const apply=()=>{
     if(directoryAdmin)renderAdminNav('access');
     else renderDirectoryNav();
     styleInPageBackButtons();
@@ -291,12 +308,12 @@ if(isRootAdmin||isCampaignAdmin||isArchive){
 
   onAuthStateChanged(auth,user=>{
     directoryAdmin=Boolean(user&&user.uid===ADMIN_UID);
-    applyDirectoryNav();
+    apply();
   });
 
-  applyDirectoryNav();
-  new MutationObserver(applyDirectoryNav).observe(document.body,{childList:true,subtree:true});
+  apply();
+  watchUi(apply);
 }else{
   applyPublic();
-  new MutationObserver(applyPublic).observe(document.body,{childList:true,subtree:true});
+  watchUi(applyPublic);
 }

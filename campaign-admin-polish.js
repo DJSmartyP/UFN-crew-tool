@@ -162,7 +162,6 @@ async function renderAdminCrewHub(slug){
   const depSnap=await getDocs(query(collection(db,'ufnDeployments'),where('campaignCrew','==',slug)));
   const ds=depSnap.docs.map(x=>({id:x.id,...x.data()})).filter(x=>x.archived!==true).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
 
-  topActions.innerHTML=`<div class="campaign-admin-nav"><a class="btn ghost tiny" href="${location.pathname}?campaigns=1">← Campaign crews</a><a class="btn ghost tiny" href="${location.pathname}?archive=1">Archive</a><span class="pill ufn">UFN administrator</span></div>`;
   main.innerHTML=`
     <div class="page-head campaign-dashboard-head">
       <div class="admin-crew-heading">

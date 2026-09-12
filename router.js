@@ -6,8 +6,8 @@ if (params.has('archive')) {
   await import('./campaign.js');
   await import('./campaign-polish.js');
 } else if (params.has('campaigns')) {
-  await import('./campaign-admin.js');
-  await import('./campaign-admin-polish.js');
+  await import('./campaign-admin.js?v=20260912-stable1');
+  await import('./campaign-admin-polish.js?v=20260912-stable1');
   await import('./campaign-admin-create.js');
 } else if (params.has('campaign')) {
   await import('./campaign-directory.js');
@@ -16,5 +16,5 @@ if (params.has('archive')) {
   await import('./admin-separation.js');
 }
 
-await import('./navigation-polish.js?v=20260912-nav3');
+await import('./navigation-polish.js?v=20260912-stable1');
 await import('./short-crew-planner.js');
