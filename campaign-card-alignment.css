@@ -1,0 +1,120 @@
+/* Campaign directory alignment + campaign crew-plan patch placement */
+
+/* Every directory card has exactly the same two-column header geometry.
+   The patch slot always exists, even for crews without a patch. */
+.campaign-directory-card{
+  display:flex;
+  flex-direction:column;
+  min-height:228px;
+}
+.campaign-directory-main{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 82px;
+  gap:14px;
+  align-items:start;
+  min-height:112px;
+}
+.campaign-directory-copy{
+  min-width:0;
+  padding-top:0;
+}
+.campaign-directory-copy .eyebrow{
+  margin:0 0 6px;
+}
+.campaign-directory-copy h2{
+  margin:0 0 6px;
+  line-height:1.12;
+  min-height:2.24em;
+  display:flex;
+  align-items:flex-start;
+}
+.campaign-directory-copy .sub{
+  margin:0;
+}
+.campaign-directory-patch-slot{
+  width:82px;
+  height:82px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+}
+.campaign-directory-patch{
+  position:static!important;
+  width:74px!important;
+  height:74px!important;
+  margin:0!important;
+  align-self:auto!important;
+  object-fit:contain;
+  border-radius:16px;
+  background:rgba(0,0,0,.18);
+  padding:5px;
+}
+.campaign-directory-card .actions{
+  margin-top:auto;
+}
+
+/* Campaign patch is part of the actual crew plan, anchored bottom-right.
+   Reserve a footer strip so it never obscures Relay or any other station. */
+.station-grid .ship-card.has-campaign-plan-patch{
+  position:relative;
+  padding-bottom:96px;
+}
+.campaign-crew-plan-patch{
+  position:absolute;
+  right:16px;
+  bottom:14px;
+  width:72px;
+  height:72px;
+  object-fit:contain;
+  border-radius:16px;
+  background:rgba(0,0,0,.20);
+  padding:5px;
+  filter:drop-shadow(0 8px 16px rgba(0,0,0,.34));
+  cursor:zoom-in;
+  z-index:3;
+}
+.station-grid .ship-card.has-campaign-plan-patch::after{
+  content:"CREW PATCH";
+  position:absolute;
+  right:98px;
+  bottom:37px;
+  color:rgba(184,211,231,.48);
+  font-size:.62rem;
+  font-weight:800;
+  letter-spacing:.12em;
+}
+
+/* Campaign player banner no longer needs an empty art block once the patch
+   has moved to the crew plan. */
+.deployment-visual-banner.player .deployment-factions:empty{
+  display:none!important;
+}
+
+@media(max-width:640px){
+  .campaign-directory-main{
+    grid-template-columns:minmax(0,1fr) 68px;
+    gap:10px;
+    min-height:100px;
+  }
+  .campaign-directory-patch-slot{
+    width:68px;
+    height:68px;
+  }
+  .campaign-directory-patch{
+    width:60px!important;
+    height:60px!important;
+  }
+  .station-grid .ship-card.has-campaign-plan-patch{
+    padding-bottom:84px;
+  }
+  .campaign-crew-plan-patch{
+    width:62px;
+    height:62px;
+    right:12px;
+    bottom:11px;
+  }
+  .station-grid .ship-card.has-campaign-plan-patch::after{
+    right:84px;
+    bottom:31px;
+  }
+}

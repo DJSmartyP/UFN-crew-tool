@@ -104,6 +104,23 @@ function applyPatchVisuals(){
   // so do not duplicate it on every deployment tile.
   document.querySelectorAll('#deployments .campaign-deployment-card img.campaign-card-patch').forEach(img=>img.remove());
 
+  document.querySelectorAll('.station-grid .ship-card').forEach(card=>{
+    let patch=card.querySelector('img.campaign-crew-plan-patch');
+    if(url){
+      card.classList.add('has-campaign-plan-patch');
+      if(!patch){
+        patch=document.createElement('img');
+        patch.className='campaign-crew-plan-patch';
+        card.appendChild(patch);
+      }
+      if(patch.getAttribute('src')!==url)patch.setAttribute('src',url);
+      patch.setAttribute('alt',`${crew?.name||'Campaign crew'} patch`);
+    }else{
+      card.classList.remove('has-campaign-plan-patch');
+      patch?.remove();
+    }
+  });
+
   const head=document.querySelector('.campaign-dashboard-head');
   if(head){
     let holder=head.querySelector('.campaign-hub-patch');

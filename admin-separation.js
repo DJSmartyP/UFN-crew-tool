@@ -93,9 +93,27 @@ async function markCampaignPlayerPage(){
 
     const factions=document.querySelector('.deployment-factions');
     if(factions&&patchUrl){
-      const existing=factions.querySelector('img.campaign-player-patch');
-      if(!existing||existing.getAttribute('src')!==patchUrl){
-        factions.innerHTML=`<img class="campaign-player-patch" src="${patchUrl}" alt="${crewName} patch">`;
+      // Campaign identity belongs with the crew plan rather than floating in
+      // the deployment banner.
+      factions.innerHTML='';
+      factions.style.display='none';
+    }
+
+    const planCard=document.querySelector('.roster-panel .ship-card')||document.querySelector('.station-grid .ship-card');
+    if(planCard){
+      let patch=planCard.querySelector('img.campaign-crew-plan-patch');
+      if(patchUrl){
+        planCard.classList.add('has-campaign-plan-patch');
+        if(!patch){
+          patch=document.createElement('img');
+          patch.className='campaign-crew-plan-patch';
+          planCard.appendChild(patch);
+        }
+        if(patch.getAttribute('src')!==patchUrl)patch.setAttribute('src',patchUrl);
+        patch.setAttribute('alt',`${crewName} patch`);
+      }else{
+        planCard.classList.remove('has-campaign-plan-patch');
+        patch?.remove();
       }
     }
 

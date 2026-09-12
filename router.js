@@ -4,16 +4,16 @@ if (params.has('archive')) {
   await import('./archive-admin.js');
 } else if (params.has('crew')) {
   await import('./campaign.js');
-  await import('./campaign-polish.js?v=20260912-usersave1');
+  await import('./campaign-polish.js?v=20260912-patchplace1');
 } else if (params.has('campaigns')) {
   await import('./campaign-admin.js?v=20260912-stable1');
   await import('./campaign-admin-polish.js?v=20260912-directrepair1');
   await import('./campaign-admin-create.js?v=20260912-directrepair1');
 } else if (params.has('campaign')) {
-  await import('./campaign-directory.js');
+  await import('./campaign-directory.js?v=20260912-patchplace1');
 } else {
   await import('./app.js');
-  await import('./admin-separation.js');
+  await import('./admin-separation.js?v=20260912-patchplace1');
 }
 
 await import('./navigation-polish.js?v=20260912-directdep1');
@@ -34,7 +34,7 @@ if (!document.querySelector('link[data-patch-lightbox-css]')) {
   link.dataset.patchLightboxCss='1';
   document.head.appendChild(link);
 }
-await import('./patch-lightbox.js?v=20260912-patchview1');
+await import('./patch-lightbox.js?v=20260912-patchplace1');
 
 if (params.has('m')) {
   if (!document.querySelector('link[data-player-save-polish-css]')) {
@@ -45,4 +45,12 @@ if (params.has('m')) {
     document.head.appendChild(link);
   }
   await import('./player-save-polish.js?v=20260912-usersave1');
+}
+
+if (!document.querySelector('link[data-campaign-card-alignment-css]')) {
+  const link=document.createElement('link');
+  link.rel='stylesheet';
+  link.href='./campaign-card-alignment.css?v=20260912-patchplace1';
+  link.dataset.campaignCardAlignmentCss='1';
+  document.head.appendChild(link);
 }

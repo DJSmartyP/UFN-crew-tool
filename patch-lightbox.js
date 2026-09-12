@@ -5,7 +5,8 @@ const PATCH_SELECTORS=[
   '.campaign-patch-banner',
   '.campaign-player-patch',
   '.campaign-card-patch',
-  '.campaign-patch-preview img'
+  '.campaign-patch-preview img',
+  '.campaign-crew-plan-patch'
 ];
 
 function esc(s){
