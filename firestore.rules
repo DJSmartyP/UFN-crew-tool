@@ -42,12 +42,34 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Human-readable player links resolve through a single small lookup document.
+    // Direct deployment-ID links remain supported for existing deployments.
+    match /inviteLinks/{slug} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if isAdmin() || (
+        isOrganiser()
+        && request.resource.data.ownerUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/missions/$(request.resource.data.missionId)).data.ownerUid == request.auth.uid
+      );
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.missionId == resource.data.missionId
+      );
+      allow delete: if isAdmin() || (
+        signedIn() && resource.data.ownerUid == request.auth.uid
+      );
+    }
+
     match /missions/{missionId} {
       allow create: if isAdmin() || (
         isOrganiser()
         && request.resource.data.ownerUid == request.auth.uid
       );
 
+      // Players need the mission settings to display the invite page and live roster.
       allow read: if signedIn();
 
       allow update, delete: if isAdmin() || (
@@ -55,6 +77,8 @@ service cloud.firestore {
       );
 
       match /players/{playerId} {
+        // The shared roster is readable to signed-in mission visitors so the live
+        // suggested crew can be calculated in the browser.
         allow read: if signedIn();
 
         function validPlayerShape() {
@@ -103,22 +127,38 @@ service cloud.firestore {
         allow delete: if isAdmin() || ownsMission(missionId);
       }
 
+      // One claim per normalised player name prevents duplicate registrations.
+      // Owners need list access so deployment deletion can remove every claim.
       match /nameClaims/{claimId} {
-        allow read: if signedIn();
+        function validClaimShape() {
+          return request.resource.data.keys().hasOnly([
+                   "playerId", "name", "updatedAt"
+                 ])
+                 && request.resource.data.playerId is string
+                 && request.resource.data.name is string
+                 && request.resource.data.updatedAt == request.time;
+        }
 
-        allow create, update: if isAdmin()
-          || ownsMission(missionId)
-          || (
-            signedIn()
-            && request.resource.data.playerId == request.auth.uid
-          );
+        function playerCanCreateOwnClaim() {
+          return signedIn()
+                 && validClaimShape()
+                 && request.resource.data.playerId == request.auth.uid;
+        }
 
-        allow delete: if isAdmin()
-          || ownsMission(missionId)
-          || (
-            signedIn()
-            && resource.data.playerId == request.auth.uid
-          );
+        function playerCanUpdateOwnClaim() {
+          return signedIn()
+                 && validClaimShape()
+                 && resource.data.playerId == request.auth.uid
+                 && request.resource.data.playerId == request.auth.uid;
+        }
+
+        allow get: if signedIn();
+        allow list: if isAdmin() || ownsMission(missionId);
+        allow create: if isAdmin() || ownsMission(missionId) || playerCanCreateOwnClaim();
+        allow update: if isAdmin() || ownsMission(missionId) || playerCanUpdateOwnClaim();
+        allow delete: if isAdmin() || ownsMission(missionId) || (
+          signedIn() && resource.data.playerId == request.auth.uid
+        );
       }
     }
 
@@ -185,8 +225,8 @@ service cloud.firestore {
           && isCampaignCrewAuth(resource.data.campaignCrew)
         );
 
-      // IMPORTANT: keep the original player responseCount update first. This
-      // avoids campaign ownership checks being evaluated for ordinary player saves.
+      // Keep the player responseCount update first so ordinary player saves do
+      // not need to evaluate campaign ownership.
       allow update: if isAdmin()
         || (
           signedIn()
@@ -206,8 +246,6 @@ service cloud.firestore {
       match /players/{playerId} {
         allow read: if signedIn();
 
-        // Preserve the original player self-write path before checking campaign
-        // ownership. Campaign organisers then get their additional management path.
         allow create: if isAdmin()
           || (
             signedIn()

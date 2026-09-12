@@ -16,6 +16,12 @@ A UFN-themed variant of Interstellar Deployment Planner for EmptyEpsilon games.
 
 This build uses the same Firebase project/config as the main Interstellar Deployment Planner, but stores its data in a separate `ufnDeployments` collection. Only the configured `ADMIN_UID` can create/manage UFN deployments.
 
+Because both apps use the same Firebase project, `firestore.rules` is a combined
+ruleset for the main IDP app and the UFN Crew Tool. Always publish the complete
+file; deploying rules copied from only one application will remove permissions
+needed by the other. Run `node --test shared-firestore-rules.test.cjs` before
+publishing rules.
+
 ## GitHub Pages
 
 Upload the contents of this folder to the root of a GitHub repository and enable GitHub Pages from the `main` branch.
