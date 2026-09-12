@@ -2,6 +2,11 @@
 
 A UFN-themed variant of Interstellar Deployment Planner for EmptyEpsilon games.
 
+UFN access is campaign-only: the global administrator defines each campaign
+crew and shares that crew's access link. A campaign organiser can manage only
+deployments assigned to that crew. Ordinary IDP organiser profiles do not gain
+access to UFN deployments, and players can write only their own response.
+
 ## Crew model
 
 - One ship: UFN only, maximum 6 players.
