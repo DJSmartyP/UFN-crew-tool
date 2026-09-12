@@ -7,7 +7,7 @@ if (params.has('archive')) {
   await import('./campaign-polish.js?v=20260912-patchplace1');
 } else if (params.has('campaigns')) {
   await import('./campaign-admin.js?v=20260912-stable1');
-  await import('./campaign-admin-polish.js?v=20260912-directrepair1');
+  await import('./campaign-admin-polish.js?v=20260912-playercontrols1');
   await import('./campaign-admin-create.js?v=20260912-directrepair1');
 } else if (params.has('campaign')) {
   await import('./campaign-directory.js?v=20260912-patchplace1');
@@ -22,7 +22,7 @@ await import('./short-crew-planner.js?v=20260912-usersave1');
 if (params.has('campaigns') && !document.querySelector('link[data-admin-direct-deployment-css]')) {
   const link=document.createElement('link');
   link.rel='stylesheet';
-  link.href='./admin-direct-deployment.css?v=20260912-directrepair1';
+  link.href='./admin-direct-deployment.css?v=20260912-playercontrols1';
   link.dataset.adminDirectDeploymentCss='1';
   document.head.appendChild(link);
 }

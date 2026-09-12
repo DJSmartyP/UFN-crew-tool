@@ -72,3 +72,25 @@
     grid-template-columns:1fr;
   }
 }
+
+/* Player management controls on direct admin deployment page */
+.admin-direct-player-row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+}
+.admin-direct-player-actions{
+  display:flex;
+  gap:7px;
+  flex:0 0 auto;
+  flex-wrap:wrap;
+}
+@media(max-width:700px){
+  .admin-direct-player-row{
+    flex-direction:column;
+  }
+  .admin-direct-player-actions{
+    width:100%;
+  }
+}

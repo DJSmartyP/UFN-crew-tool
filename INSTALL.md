@@ -1,27 +1,30 @@
-# FINAL player crew-plan watermark fix
+# Restore player edit controls at admin level
 
 Replace:
-- admin-separation.js
+- campaign-admin-polish.js
+- admin-direct-deployment.css
 - router.js
 
-Add:
-- campaign-player-plan-final.css
+Campaign organiser level:
+- The existing campaign organiser deployment manager already retains:
+  - Add player
+  - Edit player
+  - Delete player
+  - station lock
+  - preference editing
 
-This fixes the two conflicting behaviours visible in the screenshot:
+Master admin direct deployment page:
+- Restores direct controls for every registered player:
+  - Edit player
+  - Edit 1st / 2nd / 3rd preferences
+  - Edit "Really don't want"
+  - Set / clear station lock
+  - Rename player with duplicate-name protection
+  - Delete player
+- Shows the current station lock directly in the response row.
+- Player deletion also removes their name claim, organiser override and decrements responseCount.
+- Saving stays on the direct deployment page.
 
-1. The same JS module was first setting the player plan title to "Current crew plan",
-   then later changing EVERY `.ship-title` back to the crew name.
-   Mirrored player plan cards now remain "Current crew plan", matching organiser view.
+This router is based on the latest player freeze/watermark chain so it does not regress those fixes.
 
-2. Older campaign alignment styling could still leave/reintroduce the explicit
-   bottom-right campaign patch treatment.
-   The final layer now:
-   - removes any `.campaign-crew-plan-patch` image from player plans
-   - removes `has-campaign-plan-patch`
-   - cancels its reserved footer space
-   - force-overrides the base `.ship-card::after` UFN watermark
-   - uses the uploaded campaign patch as the ONLY plan watermark
-
-The campaign patch still remains in the player title/banner.
-
-No Firebase/Auth/Firestore/rules changes are required.
+No Firestore rules changes are required; master admin already has write/delete permission.

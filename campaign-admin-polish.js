@@ -3,7 +3,7 @@ import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.18
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import {
   getFirestore, collection, doc, getDoc, getDocs, onSnapshot, query, where,
-  updateDoc, setDoc, serverTimestamp
+  updateDoc, setDoc, serverTimestamp, runTransaction
 } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
 const params=new URLSearchParams(location.search);
@@ -33,6 +33,31 @@ const DIRECT_ROLES=[
 
 function prefLabel(value){
   return value===FLEX?FLEX_LABEL:String(value||'');
+}
+function roleOptions(selected=''){
+  return `<option value="">Choose…</option><option value="${FLEX}"${selected===FLEX?' selected':''}>${FLEX_LABEL}</option>`+
+    DIRECT_ROLES.map(r=>`<option value="${r.name}"${selected===r.name?' selected':''}>${r.name}</option>`).join('');
+}
+function lockRoleOptions(selected=''){
+  return `<option value="">No station lock</option>`+
+    DIRECT_ROLES.map(r=>`<option value="${r.name}"${selected===r.name?' selected':''}>${r.name}</option>`).join('');
+}
+function normalizeName(s){
+  return String(s||'').normalize('NFKC').trim().toLocaleLowerCase().replace(/\s+/g,' ');
+}
+function claimId(name){
+  return encodeURIComponent(normalizeName(name));
+}
+function validateAdminPrefs(payload){
+  if(!payload.name)return 'Enter a player name.';
+  if(!payload.prefs?.[0]||!payload.prefs?.[1]||!payload.prefs?.[2]){
+    return `Choose all three station preferences, or use ${FLEX_LABEL}.`;
+  }
+  const concrete=payload.prefs.filter(x=>x!==FLEX);
+  if(new Set(concrete).size!==concrete.length)return 'Choose different stations for ranked choices.';
+  const clash=concrete.find(x=>(payload.dislikes||[]).includes(x));
+  if(clash)return `${clash} cannot be both preferred and really unwanted.`;
+  return '';
 }
 function roleClass(role){
   return `role-${String(role||'').replace(/[^A-Za-z]/g,'')}`;
@@ -337,6 +362,147 @@ async function uploadAdminPatch(c,file,message){
 }
 
 
+
+async function openAdminPlayerEditor(slug,d,p){
+  const currentOverride=d.overrides?.[p.id]||{};
+  const prefs=Array.isArray(p.prefs)&&p.prefs.length===3?p.prefs:[FLEX,FLEX,FLEX];
+  const dislikes=Array.isArray(p.dislikes)?p.dislikes:[];
+
+  const wrap=document.createElement('div');
+  wrap.className='modal-backdrop';
+  wrap.innerHTML=`<section class="modal panel">
+    <button class="btn ghost tiny modal-close" type="button">Close</button>
+    <div class="eyebrow">Admin player management</div>
+    <h2>Edit ${esc(p.name||'player')}</h2>
+    <form id="adminDirectPlayerForm">
+      <div class="field"><label>Player name</label><input id="adpName" maxlength="60" required value="${esc(p.name||'')}"></div>
+      <div class="field"><label>1st station</label><select id="adp1">${roleOptions(prefs[0])}</select></div>
+      <div class="field"><label>2nd station</label><select id="adp2">${roleOptions(prefs[1])}</select></div>
+      <div class="field"><label>3rd station</label><select id="adp3">${roleOptions(prefs[2])}</select></div>
+      <div class="label">Really don't want</div>
+      <div id="adpDislikes" class="checks">
+        ${DIRECT_ROLES.map(r=>`<label class="check"><input type="checkbox" value="${r.name}"${dislikes.includes(r.name)?' checked':''}><span>${r.name}</span></label>`).join('')}
+      </div>
+      <h3 style="margin-top:14px">Organiser lock</h3>
+      <div class="field"><label>Lock to station</label><select id="adpLockRole">${lockRoleOptions(currentOverride.role||'')}</select></div>
+      <div class="actions">
+        <button class="btn primary">Save changes</button>
+        <button id="adminDirectDeleteFromModal" class="btn danger" type="button">Delete player</button>
+      </div>
+      <div id="adpMessage" class="message"></div>
+    </form>
+  </section>`;
+
+  document.body.appendChild(wrap);
+  wrap.querySelector('.modal-close').onclick=()=>wrap.remove();
+
+  wrap.querySelector('#adminDirectPlayerForm').onsubmit=async e=>{
+    e.preventDefault();
+    const payload={
+      name:wrap.querySelector('#adpName').value.trim(),
+      shipPref:p.shipPref||'',
+      prefs:[
+        wrap.querySelector('#adp1').value,
+        wrap.querySelector('#adp2').value,
+        wrap.querySelector('#adp3').value
+      ],
+      dislikes:[...wrap.querySelectorAll('#adpDislikes input:checked')].map(x=>x.value),
+      source:p.source||'player',
+      updatedAt:serverTimestamp()
+    };
+    const err=validateAdminPrefs(payload);
+    if(err){
+      wrap.querySelector('#adpMessage').textContent=err;
+      wrap.querySelector('#adpMessage').className='message error';
+      return;
+    }
+
+    try{
+      const depRef=doc(db,'ufnDeployments',d.id);
+      const playerRef=doc(db,'ufnDeployments',d.id,'players',p.id);
+      const oldClaimRef=doc(db,'ufnDeployments',d.id,'nameClaims',claimId(p.name));
+      const newClaimRef=doc(db,'ufnDeployments',d.id,'nameClaims',claimId(payload.name));
+      const role=wrap.querySelector('#adpLockRole').value;
+
+      await runTransaction(db,async tx=>{
+        const [depSnap,newClaimSnap]=await Promise.all([
+          tx.get(depRef),
+          tx.get(newClaimRef)
+        ]);
+        if(!depSnap.exists())throw new Error('Deployment no longer exists.');
+        if(newClaimSnap.exists()){
+          const claim=newClaimSnap.data();
+          const belongsToThisPlayer=
+            claim.playerDocId===p.id ||
+            claim.playerId===p.id;
+          if(!belongsToThisPlayer)throw new Error('That name is already registered for this deployment.');
+        }
+
+        const depData=depSnap.data();
+        const overrides={...(depData.overrides||{})};
+        if(role)overrides[p.id]={shipId:'',role};
+        else delete overrides[p.id];
+
+        tx.set(playerRef,{...p,...payload},{merge:true});
+
+        if(normalizeName(payload.name)!==normalizeName(p.name)){
+          tx.delete(oldClaimRef);
+        }
+        tx.set(newClaimRef,{
+          playerId:p.id,
+          playerDocId:p.id,
+          name:payload.name,
+          source:'admin',
+          updatedAt:serverTimestamp()
+        },{merge:true});
+
+        tx.update(depRef,{overrides,updatedAt:serverTimestamp()});
+      });
+
+      wrap.remove();
+      await renderAdminDeploymentPage(slug,d.id);
+    }catch(ex){
+      wrap.querySelector('#adpMessage').textContent=ex.message;
+      wrap.querySelector('#adpMessage').className='message error';
+    }
+  };
+
+  wrap.querySelector('#adminDirectDeleteFromModal').onclick=async()=>{
+    if(!confirm(`Delete ${p.name} from this deployment?`))return;
+    try{
+      await deleteAdminPlayer(slug,d,p);
+      wrap.remove();
+    }catch(ex){
+      wrap.querySelector('#adpMessage').textContent=ex.message;
+      wrap.querySelector('#adpMessage').className='message error';
+    }
+  };
+}
+
+async function deleteAdminPlayer(slug,d,p){
+  const depRef=doc(db,'ufnDeployments',d.id);
+  const playerRef=doc(db,'ufnDeployments',d.id,'players',p.id);
+  const claimRef=doc(db,'ufnDeployments',d.id,'nameClaims',claimId(p.name));
+
+  await runTransaction(db,async tx=>{
+    const depSnap=await tx.get(depRef);
+    if(!depSnap.exists())throw new Error('Deployment no longer exists.');
+    const depData=depSnap.data();
+    const overrides={...(depData.overrides||{})};
+    delete overrides[p.id];
+
+    tx.delete(playerRef);
+    tx.delete(claimRef);
+    tx.update(depRef,{
+      responseCount:Math.max(0,Number(depData.responseCount||0)-1),
+      overrides,
+      updatedAt:serverTimestamp()
+    });
+  });
+
+  await renderAdminDeploymentPage(slug,d.id);
+}
+
 async function renderAdminDeploymentPage(slug,deploymentId){
   const [cSnap,dSnap]=await Promise.all([
     getDoc(doc(db,'ufnCampaignCrews',slug)),
@@ -420,18 +586,38 @@ async function renderAdminDeploymentPage(slug,deploymentId){
       <h2>Responses</h2>
       <div class="admin-direct-player-list">
         ${ps.length?ps.map(p=>`
-          <article class="admin-direct-player-row">
+          <article class="admin-direct-player-row" data-admin-player-row="${esc(p.id)}">
             <div class="admin-direct-player-main">
               <strong>${esc(p.name||'Unnamed player')}</strong>
               <div class="admin-direct-pref-list">
                 ${(p.prefs||[]).map((pref,i)=>`<span class="pref-tag">${i+1}. ${esc(prefLabel(pref))}</span>`).join('')}
               </div>
               <div class="sub">Really don't want: ${(p.dislikes||[]).length?(p.dislikes||[]).map(esc).join(', '):'None'}</div>
+              <div class="sub">Station lock: ${esc(d.overrides?.[p.id]?.role||'None')}</div>
+            </div>
+            <div class="admin-direct-player-actions">
+              <button class="btn primary tiny" data-admin-edit-player="${esc(p.id)}" type="button">Edit player</button>
+              <button class="btn danger tiny" data-admin-delete-player="${esc(p.id)}" type="button">Delete</button>
             </div>
           </article>`).join(''):
           '<div class="empty-state"><h3>No responses yet</h3><p>Share the player response link to start collecting preferences.</p></div>'}
       </div>
     </section>`;
+
+  document.querySelectorAll('[data-admin-edit-player]').forEach(btn=>{
+    btn.onclick=()=>{
+      const p=ps.find(x=>x.id===btn.dataset.adminEditPlayer);
+      if(p)openAdminPlayerEditor(slug,d,p);
+    };
+  });
+  document.querySelectorAll('[data-admin-delete-player]').forEach(btn=>{
+    btn.onclick=async()=>{
+      const p=ps.find(x=>x.id===btn.dataset.adminDeletePlayer);
+      if(!p||!confirm(`Delete ${p.name} from this deployment?`))return;
+      try{await deleteAdminPlayer(slug,d,p);}
+      catch(err){alert(`Could not delete player: ${err.message}`);}
+    };
+  });
 
   document.querySelector('#adminDirectEditDeployment').onclick=()=>editDeployment(d);
   document.querySelector('#adminDirectCopyPlayerLink').onclick=async e=>{
