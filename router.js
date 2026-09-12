@@ -54,3 +54,12 @@ if (!document.querySelector('link[data-campaign-card-alignment-css]')) {
   link.dataset.campaignCardAlignmentCss='1';
   document.head.appendChild(link);
 }
+
+if (!document.querySelector('link[data-campaign-watermark-css]')) {
+  const link=document.createElement('link');
+  link.rel='stylesheet';
+  link.href='./campaign-watermark.css?v=20260912-watermark1';
+  link.dataset.campaignWatermarkCss='1';
+  document.head.appendChild(link);
+}
+await import('./campaign-watermark.js?v=20260912-watermark1');

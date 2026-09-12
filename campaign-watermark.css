@@ -1,0 +1,9 @@
+/* Use crew patches as the faint watermark on campaign pages */
+.ufn-mark.campaign-watermark-active img,
+.campaign-watermark-active img{
+  object-fit:contain;
+  border-radius:20px;
+  padding:10px;
+  opacity:.16;
+  filter:grayscale(.1);
+}
