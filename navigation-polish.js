@@ -63,6 +63,18 @@ function adminPrimary(active){
 
 function adminContext(){
   if(adminCrew){
+    const deploymentId=params.get('adminDeployment')||'';
+    if(deploymentId){
+      const title=document.querySelector('.campaign-dashboard-head h1')?.textContent?.trim()||'Deployment';
+      return `<div class="e-nav-context">
+        ${backLink({label:'Back to crew hub',href:`${path}?campaigns=1&adminCrew=${encodeURIComponent(adminCrew)}`})}
+        <div class="e-context-current">
+          <img src="${ICONS.deployments}" alt="">
+          <span><small>Admin deployment</small><b>${esc(title)}</b></span>
+        </div>
+      </div>`;
+    }
+
     const crewName=document.querySelector('.admin-crew-heading h1')?.textContent?.trim()
       || document.querySelector('.campaign-dashboard-head h1')?.textContent?.trim()
       || 'Campaign crew';

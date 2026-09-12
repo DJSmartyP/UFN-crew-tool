@@ -8,6 +8,7 @@ import {
 
 const params=new URLSearchParams(location.search);
 const adminCrew=String(params.get('adminCrew')||'').trim();
+const adminDeployment=String(params.get('adminDeployment')||'').trim();
 const app=getApps().find(a=>a.name==='[DEFAULT]')||initializeApp(firebaseConfig);
 const auth=getAuth(app),db=getFirestore(app);
 const main=document.querySelector('#main'),topActions=document.querySelector('#topActions');
@@ -15,6 +16,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const dateText=v=>{if(!v)return 'Date not set';const [y,m,d]=String(v).split('-').map(Number);return new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(y,m-1,d)));};
 const playerUrl=id=>`${location.origin}${location.pathname}?m=${encodeURIComponent(id)}`;
 const adminCrewUrl=id=>`${location.pathname}?campaigns=1&adminCrew=${encodeURIComponent(id)}`;
+const adminDeploymentUrl=(crewId,depId)=>`${location.pathname}?campaigns=1&adminCrew=${encodeURIComponent(crewId)}&adminDeployment=${encodeURIComponent(depId)}`;
 let archivedCrewIds=new Set();
 let archivedDeploymentIds=new Set();
 
@@ -79,6 +81,42 @@ function enhanceCampaignAdminList(){
   document.querySelectorAll('[data-crew-card]').forEach(card=>{
     const id=card.dataset.crewCard;
     if(archivedCrewIds.has(id)){card.remove();return;}
+
+    // Give every deployment tile direct admin management controls.
+    card.querySelectorAll('[data-crew-deployments] .mission-card').forEach(depCard=>{
+      const depId=depCard.querySelector('[data-admin-copy-player]')?.dataset?.adminCopyPlayer;
+      if(!depId)return;
+
+      let actions=depCard.querySelector('.admin-direct-deployment-actions');
+      if(!actions){
+        actions=document.createElement('div');
+        actions.className='actions admin-direct-deployment-actions';
+        actions.innerHTML=`
+          <a class="btn primary" data-admin-direct-manage href="${adminDeploymentUrl(id,depId)}">Manage deployment</a>
+          <button class="btn ghost" data-admin-direct-edit type="button">Edit details</button>
+          <a class="btn ghost" data-admin-player-page href="${playerUrl(depId)}" target="_blank" rel="noopener">Open player page</a>
+          <button class="btn ghost" data-admin-direct-archive type="button">Archive</button>`;
+        depCard.appendChild(actions);
+      }
+
+      actions.querySelector('[data-admin-direct-edit]')?.addEventListener('click',async e=>{
+        e.preventDefault();
+        try{
+          const snap=await getDoc(doc(db,'ufnDeployments',depId));
+          if(!snap.exists())throw new Error('Deployment no longer exists.');
+          await editDeployment({id:depId,...snap.data()});
+        }catch(err){alert(`Could not edit deployment: ${err.message}`);}
+      },{once:true});
+
+      actions.querySelector('[data-admin-direct-archive]')?.addEventListener('click',async e=>{
+        e.preventDefault();
+        try{
+          const title=depCard.querySelector('h2,h3')?.textContent?.trim()||'this deployment';
+          await archiveDeployment(depId,title);
+          depCard.remove();
+        }catch(err){alert(`Could not archive deployment: ${err.message}`);}
+      },{once:true});
+    });
 
     const open=card.querySelector('.campaign-admin-actions a.btn.primary');
     if(open){
@@ -153,6 +191,110 @@ async function uploadAdminPatch(c,file,message){
   await updateDoc(doc(db,'ufnCampaignCrews',c.id),{patchUrl:url,patchUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()});
 }
 
+
+async function renderAdminDeploymentPage(slug,deploymentId){
+  const [cSnap,dSnap]=await Promise.all([
+    getDoc(doc(db,'ufnCampaignCrews',slug)),
+    getDoc(doc(db,'ufnDeployments',deploymentId))
+  ]);
+
+  if(!cSnap.exists()){
+    main.innerHTML='<section class="empty-state"><h2>Campaign crew not found</h2></section>';
+    return;
+  }
+  if(!dSnap.exists()){
+    main.innerHTML='<section class="empty-state"><h2>Deployment not found</h2><p>It may have been archived or removed.</p></section>';
+    return;
+  }
+
+  const c={id:cSnap.id,...cSnap.data()};
+  const d={id:dSnap.id,...dSnap.data()};
+  if(d.campaignCrew!==slug){
+    main.innerHTML='<section class="empty-state"><h2>Deployment mismatch</h2><p>This deployment does not belong to that campaign crew.</p></section>';
+    return;
+  }
+
+  const playersSnap=await getDocs(collection(db,'ufnDeployments',deploymentId,'players'));
+  const ps=playersSnap.docs
+    .map(x=>({id:x.id,...x.data()}))
+    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+
+  main.innerHTML=`
+    <div class="page-head campaign-dashboard-head">
+      <div class="admin-crew-heading">
+        ${c.patchUrl?`<img class="admin-crew-patch" src="${esc(c.patchUrl)}" alt="${esc(c.name||c.id)} patch">`:''}
+        <div>
+          <div class="eyebrow">Admin deployment management</div>
+          <h1>${esc(d.title||'UFN Deployment')}</h1>
+          <p class="sub">${esc(c.name||c.id)} · ${esc(dateText(d.date))}</p>
+        </div>
+      </div>
+      <div class="campaign-dashboard-actions">
+        <a class="btn ghost" href="${adminCrewUrl(slug)}">← Crew hub</a>
+        <button id="adminDirectEditDeployment" class="btn primary">Edit details</button>
+        <a class="btn ghost" href="${playerUrl(d.id)}" target="_blank" rel="noopener">Open player page</a>
+        <button id="adminDirectArchiveDeployment" class="btn ghost">Archive</button>
+      </div>
+    </div>
+
+    <div class="grid two">
+      <aside>
+        <section class="panel">
+          <div class="eyebrow">Player response link</div>
+          <h2>Share link</h2>
+          <div class="share-box">
+            <input id="adminDirectPlayerLink" readonly value="${esc(playerUrl(d.id))}">
+            <button id="adminDirectCopyPlayerLink" class="btn primary tiny">Copy link</button>
+          </div>
+          <div class="mission-meta" style="margin-top:12px">
+            <span class="pill ${d.closed?'closed':'open'}">${d.closed?'Choices closed':'Choices open'}</span>
+            <span class="pill">${ps.length}/6 responses</span>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-top:14px">
+          <div class="eyebrow">Deployment details</div>
+          <dl class="admin-direct-details">
+            <dt>Crew</dt><dd>${esc(c.name||c.id)}</dd>
+            <dt>Date</dt><dd>${esc(dateText(d.date))}</dd>
+            <dt>Deployment ID</dt><dd>${esc(d.id)}</dd>
+            <dt>Status</dt><dd>${d.archived?'Archived':d.closed?'Choices closed':'Choices open'}</dd>
+          </dl>
+        </section>
+      </aside>
+
+      <section class="panel">
+        <div class="eyebrow">Registered crew</div>
+        <h2>Responses</h2>
+        <div class="admin-direct-player-list">
+          ${ps.length?ps.map(p=>`
+            <article class="admin-direct-player-row">
+              <div>
+                <strong>${esc(p.name||'Unnamed player')}</strong>
+                <div class="sub">${(p.prefs||[]).length?`Preferences: ${(p.prefs||[]).map(esc).join(' · ')}`:'No station preferences recorded'}</div>
+                ${(p.dislikes||[]).length?`<div class="sub">Really don't want: ${(p.dislikes||[]).map(esc).join(', ')}</div>`:''}
+              </div>
+            </article>`).join(''):
+            '<div class="empty-state"><h3>No responses yet</h3><p>Share the player response link to start collecting preferences.</p></div>'}
+        </div>
+      </section>
+    </div>`;
+
+  document.querySelector('#adminDirectEditDeployment').onclick=()=>editDeployment(d);
+  document.querySelector('#adminDirectCopyPlayerLink').onclick=async e=>{
+    await navigator.clipboard.writeText(playerUrl(d.id));
+    const btn=e.currentTarget,old=btn.textContent;
+    btn.textContent='Copied ✓';
+    setTimeout(()=>{if(btn.isConnected)btn.textContent=old;},1200);
+  };
+  document.querySelector('#adminDirectArchiveDeployment').onclick=async()=>{
+    try{
+      await archiveDeployment(d.id,d.title||'this deployment');
+      location.href=adminCrewUrl(slug);
+    }catch(err){alert(`Could not archive deployment: ${err.message}`);}
+  };
+}
+
 async function renderAdminCrewHub(slug){
   const cSnap=await getDoc(doc(db,'ufnCampaignCrews',slug));
   if(!cSnap.exists()){
@@ -184,7 +326,12 @@ async function renderAdminCrewHub(slug){
         <div class="mission-date">${esc(dateText(d.date))}</div><h3>${esc(d.title||'UFN Deployment')}</h3>
         <div class="mission-meta"><span class="pill ${d.closed?'closed':'open'}">${d.closed?'Choices closed':'Choices open'}</span><span class="pill">${Number(d.responseCount||0)}/6 responses</span></div>
         <div class="share-box"><input readonly value="${esc(playerUrl(d.id))}"><button class="btn ghost tiny" data-admin-copy="${esc(d.id)}">Copy player link</button></div>
-        <div class="actions"><button class="btn primary" data-admin-edit="${esc(d.id)}">Edit</button><button class="btn ghost" data-admin-archive="${esc(d.id)}">Archive</button></div>
+        <div class="actions">
+          <a class="btn primary" href="${adminDeploymentUrl(slug,d.id)}">Manage deployment</a>
+          <button class="btn ghost" data-admin-edit="${esc(d.id)}">Edit details</button>
+          <a class="btn ghost" href="${playerUrl(d.id)}" target="_blank" rel="noopener">Open player page</a>
+          <button class="btn ghost" data-admin-archive="${esc(d.id)}">Archive</button>
+        </div>
       </section>`).join(''):'<section class="empty-state"><h3>No active deployments</h3><p>Archived deployments are on the Archive page.</p></section>'}</div>`;
 
   document.querySelector('#adminRenameCrew').onclick=async()=>{try{if(await editCrewName(c))await renderAdminCrewHub(slug);}catch(err){alert(err.message);}};
@@ -210,7 +357,18 @@ async function renderAdminCrewHub(slug){
 
 onAuthStateChanged(auth,user=>{
   if(!user||user.uid!==ADMIN_UID)return;
-  if(adminCrew){renderAdminCrewHub(adminCrew).catch(err=>{main.innerHTML=`<section class="empty-state"><h2>Could not open admin hub</h2><p>${esc(err.message)}</p></section>`;});return;}
+  if(adminCrew&&adminDeployment){
+    renderAdminDeploymentPage(adminCrew,adminDeployment).catch(err=>{
+      main.innerHTML=`<section class="empty-state"><h2>Could not open deployment</h2><p>${esc(err.message)}</p></section>`;
+    });
+    return;
+  }
+  if(adminCrew){
+    renderAdminCrewHub(adminCrew).catch(err=>{
+      main.innerHTML=`<section class="empty-state"><h2>Could not open admin hub</h2><p>${esc(err.message)}</p></section>`;
+    });
+    return;
+  }
 
   onSnapshot(collection(db,'ufnCampaignCrews'),snap=>{
     archivedCrewIds=new Set(snap.docs.filter(x=>x.data().archived===true).map(x=>x.id));

@@ -1,0 +1,33 @@
+
+/* Direct admin deployment management */
+.admin-direct-details{
+  display:grid;
+  grid-template-columns:max-content 1fr;
+  gap:8px 14px;
+  margin:12px 0 0;
+}
+.admin-direct-details dt{
+  color:rgba(184,211,231,.65);
+  font-size:.78rem;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.admin-direct-details dd{
+  margin:0;
+  color:#eef7ff;
+}
+.admin-direct-player-list{
+  display:grid;
+  gap:10px;
+  margin-top:12px;
+}
+.admin-direct-player-row{
+  padding:12px 14px;
+  border:1px solid rgba(113,176,224,.14);
+  border-radius:12px;
+  background:rgba(7,26,47,.48);
+}
+.admin-direct-deployment-actions{
+  margin-top:12px;
+  flex-wrap:wrap;
+}

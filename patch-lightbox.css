@@ -1,0 +1,131 @@
+/* Expandable campaign/team patch lightbox */
+.patch-expandable{
+  cursor:zoom-in!important;
+  transition:transform .14s ease, filter .14s ease;
+}
+.patch-expandable:hover{
+  transform:scale(1.035);
+  filter:drop-shadow(0 12px 24px rgba(0,0,0,.36)) brightness(1.06);
+}
+.patch-expandable:focus-visible{
+  outline:2px solid rgba(88,168,255,.9);
+  outline-offset:4px;
+  border-radius:14px;
+}
+
+body.patch-lightbox-open{
+  overflow:hidden;
+}
+
+.patch-lightbox-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:99999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:28px;
+  background:rgba(0,8,18,.86);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  animation:patchFadeIn .14s ease-out;
+}
+
+.patch-lightbox-card{
+  position:relative;
+  width:min(760px,92vw);
+  max-height:90vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:34px 34px 28px;
+  border:1px solid rgba(113,176,224,.24);
+  border-radius:24px;
+  background:
+    radial-gradient(circle at 50% 18%,rgba(88,168,255,.10),transparent 42%),
+    linear-gradient(180deg,rgba(7,26,48,.98),rgba(3,15,30,.98));
+  box-shadow:
+    0 34px 80px rgba(0,0,0,.52),
+    inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.patch-lightbox-close{
+  position:absolute;
+  top:14px;
+  right:16px;
+  width:40px;
+  height:40px;
+  border:1px solid rgba(113,176,224,.18);
+  border-radius:12px;
+  background:rgba(4,18,35,.76);
+  color:#eaf6ff;
+  font:inherit;
+  font-size:1.6rem;
+  line-height:1;
+  cursor:pointer;
+}
+.patch-lightbox-close:hover{
+  background:rgba(17,49,78,.92);
+  border-color:rgba(88,168,255,.42);
+}
+
+.patch-lightbox-art{
+  width:100%;
+  min-height:280px;
+  max-height:62vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:12px;
+}
+.patch-lightbox-art img{
+  display:block;
+  max-width:min(560px,78vw);
+  max-height:58vh;
+  width:auto;
+  height:auto;
+  object-fit:contain;
+  filter:drop-shadow(0 24px 38px rgba(0,0,0,.42));
+}
+
+.patch-lightbox-copy{
+  width:100%;
+  text-align:center;
+  padding-top:8px;
+}
+.patch-lightbox-eyebrow{
+  margin-bottom:6px;
+  color:rgba(184,211,231,.62);
+  font-size:.72rem;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}
+.patch-lightbox-copy h2{
+  margin:0;
+  color:#f5fbff;
+  font-size:clamp(1.35rem,3vw,2rem);
+}
+
+@keyframes patchFadeIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+@media(max-width:640px){
+  .patch-lightbox-backdrop{
+    padding:14px;
+  }
+  .patch-lightbox-card{
+    width:100%;
+    padding:26px 18px 22px;
+    border-radius:18px;
+  }
+  .patch-lightbox-art{
+    min-height:220px;
+  }
+  .patch-lightbox-art img{
+    max-width:82vw;
+    max-height:54vh;
+  }
+}
