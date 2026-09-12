@@ -156,11 +156,14 @@ async function markCampaignPlayerPage(){
         }
       }
 
-      let patch=planCard.querySelector('img.campaign-crew-plan-patch');
+      const explicitPatch=planCard.querySelector('img.campaign-crew-plan-patch');
+      if(explicitPatch)explicitPatch.remove();
+
+      if(planCard.classList.contains('has-campaign-plan-patch')){
+        planCard.classList.remove('has-campaign-plan-patch');
+      }
+
       if(patchUrl){
-        if(!planCard.classList.contains('has-campaign-plan-patch')){
-          planCard.classList.add('has-campaign-plan-patch');
-        }
         if(!planCard.classList.contains('campaign-watermark-card')){
           planCard.classList.add('campaign-watermark-card');
         }
@@ -169,26 +172,13 @@ async function markCampaignPlayerPage(){
         if(planCard.style.getPropertyValue('--campaign-watermark-image')!==watermarkValue){
           planCard.style.setProperty('--campaign-watermark-image',watermarkValue);
         }
-
-        if(!patch){
-          patch=document.createElement('img');
-          patch.className='campaign-crew-plan-patch';
-          planCard.appendChild(patch);
-        }
-        if(patch.getAttribute('src')!==patchUrl)patch.setAttribute('src',patchUrl);
-        const alt=`${crewName} patch`;
-        if(patch.getAttribute('alt')!==alt)patch.setAttribute('alt',alt);
       }else{
-        if(planCard.classList.contains('has-campaign-plan-patch')){
-          planCard.classList.remove('has-campaign-plan-patch');
-        }
         if(planCard.classList.contains('campaign-watermark-card')){
           planCard.classList.remove('campaign-watermark-card');
         }
         if(planCard.style.getPropertyValue('--campaign-watermark-image')){
           planCard.style.removeProperty('--campaign-watermark-image');
         }
-        patch?.remove();
       }
     }
 

@@ -32,16 +32,8 @@
   z-index:1;
 }
 
-/* Keep the uploaded patch as the explicit bottom-right crew identity badge too. */
-.ship-card.campaign-player-plan-mirror.has-campaign-plan-patch{
-  padding-bottom:96px;
-}
-
 @media(max-width:700px){
   .player-layout .roster-panel .campaign-player-plan-mirror .ship-brand{
     min-height:86px;
-  }
-  .ship-card.campaign-player-plan-mirror.has-campaign-plan-patch{
-    padding-bottom:84px;
   }
 }
