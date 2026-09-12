@@ -5,6 +5,7 @@ const path = require("node:path");
 
 const source = fs.readFileSync(path.join(__dirname, "campaign-admin-polish.js"), "utf8");
 const router = fs.readFileSync(path.join(__dirname, "router.js"), "utf8");
+const index = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
 
 test("campaign admin enhancement reuses the base action row", () => {
   assert.match(
@@ -16,4 +17,5 @@ test("campaign admin enhancement reuses the base action row", () => {
 
 test("router cache key includes the deduplicated admin build", () => {
   assert.match(router, /campaign-admin-polish\.js\?v=20260912-dedup1/);
+  assert.match(index, /router\.js\?v=20260912-dedup1/);
 });
