@@ -195,7 +195,17 @@ async function markCampaignPlayerPage(){
     });
 
     document.querySelectorAll('.ship-title').forEach(el=>{
-      if(el.textContent!==crewName)el.textContent=crewName;
+      const mirrored=el.closest('.campaign-player-plan-mirror');
+      const wanted=mirrored?'Current crew plan':crewName;
+      if(el.textContent!==wanted)el.textContent=wanted;
+    });
+
+    // Final cleanup: campaign player plans use the uploaded patch as a watermark
+    // only. Remove any legacy bottom-right patch element/class if an older layer
+    // recreates it after the short-crew planner redraws the roster.
+    document.querySelectorAll('.player-layout .campaign-crew-plan-patch').forEach(img=>img.remove());
+    document.querySelectorAll('.player-layout .ship-card.has-campaign-plan-patch').forEach(card=>{
+      card.classList.remove('has-campaign-plan-patch');
     });
   };
 

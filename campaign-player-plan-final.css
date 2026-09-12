@@ -1,0 +1,62 @@
+/* FINAL campaign player plan rules.
+   Loaded after all earlier campaign/short-crew styles. */
+
+/* Player Current Crew Plan mirrors organiser presentation. */
+body .player-layout .roster-panel .ship-card.campaign-player-plan-mirror{
+  width:100%;
+  max-width:none;
+  padding-bottom:0!important;
+}
+
+body .player-layout .roster-panel .ship-card.campaign-player-plan-mirror .ship-brand{
+  grid-template-columns:minmax(0,1fr) auto!important;
+  min-height:106px;
+}
+
+body .player-layout .roster-panel .ship-card.campaign-player-plan-mirror .faction-badge{
+  display:none!important;
+}
+
+/* Uploaded campaign patch is the ONLY crew-plan watermark.
+   This selector deliberately outranks the base .ship-card:after UFN rule. */
+body .player-layout .roster-panel .ship-card.campaign-watermark-card::after{
+  content:""!important;
+  position:absolute!important;
+  right:-44px!important;
+  bottom:-58px!important;
+  width:220px!important;
+  height:220px!important;
+  border-radius:0!important;
+  background:var(--campaign-watermark-image) center / contain no-repeat!important;
+  opacity:.070!important;
+  pointer-events:none!important;
+}
+
+/* Absolutely suppress any legacy explicit bottom-right campaign patch badge. */
+body .player-layout .campaign-crew-plan-patch,
+body .player-layout .ship-card > img.campaign-crew-plan-patch{
+  display:none!important;
+}
+
+/* Older alignment layer reserved a footer when this class existed.
+   Never reserve that space on player crew plans. */
+body .player-layout .ship-card.has-campaign-plan-patch{
+  padding-bottom:0!important;
+}
+body .player-layout .ship-card.has-campaign-plan-patch::after{
+  content:""!important;
+}
+
+/* Content stays above the faded watermark. */
+body .player-layout .ship-card.campaign-watermark-card .ship-brand,
+body .player-layout .ship-card.campaign-watermark-card .short-crew-summary,
+body .player-layout .ship-card.campaign-watermark-card .station{
+  position:relative;
+  z-index:1;
+}
+
+@media(max-width:700px){
+  body .player-layout .roster-panel .ship-card.campaign-player-plan-mirror .ship-brand{
+    min-height:86px;
+  }
+}

@@ -1,16 +1,27 @@
-# Campaign player crew-plan patch: watermark only
+# FINAL player crew-plan watermark fix
 
 Replace:
 - admin-separation.js
-- campaign-player-plan-mirror.css
 - router.js
 
-What changes:
-- Removes the explicit bottom-right patch badge from the campaign player crew plan.
-- Keeps the uploaded campaign patch as the crew-plan watermark.
-- Keeps the patch in the player title/banner.
-- Keeps the organiser-mirrored Current Crew Plan layout.
-- Keeps all six station rows and short-crew combined-role notes.
-- Preserves the freeze-safe conditional/throttled player-page observer.
+Add:
+- campaign-player-plan-final.css
+
+This fixes the two conflicting behaviours visible in the screenshot:
+
+1. The same JS module was first setting the player plan title to "Current crew plan",
+   then later changing EVERY `.ship-title` back to the crew name.
+   Mirrored player plan cards now remain "Current crew plan", matching organiser view.
+
+2. Older campaign alignment styling could still leave/reintroduce the explicit
+   bottom-right campaign patch treatment.
+   The final layer now:
+   - removes any `.campaign-crew-plan-patch` image from player plans
+   - removes `has-campaign-plan-patch`
+   - cancels its reserved footer space
+   - force-overrides the base `.ship-card::after` UFN watermark
+   - uses the uploaded campaign patch as the ONLY plan watermark
+
+The campaign patch still remains in the player title/banner.
 
 No Firebase/Auth/Firestore/rules changes are required.
