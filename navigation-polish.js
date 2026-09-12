@@ -50,7 +50,7 @@ function adminPrimary(active){
     <nav class="e-nav-tabs" aria-label="UFN administration">
       ${navTab({label:'Deployments',href:path,icon:ICONS.deployments,active:active==='deployments',current:active==='deployments'})}
       ${navTab({label:'Campaign crews',href:`${path}?campaigns=1`,icon:ICONS.campaigns,active:active==='campaigns',current:active==='campaigns'})}
-      ${navTab({label:'Crew access',href:`${path}?campaign=1`,icon:ICONS.access})}
+      ${navTab({label:'Crew access',href:`${path}?campaign=1`,icon:ICONS.access,active:active==='access',current:active==='access'})}
       ${navTab({label:'Archive',href:`${path}?archive=1`,icon:ICONS.archive,active:active==='archive',current:active==='archive'})}
     </nav>
     <div class="e-nav-account">
@@ -275,6 +275,27 @@ if(isRootAdmin||isCampaignAdmin||isArchive){
     apply();
     new MutationObserver(apply).observe(document.body,{childList:true,subtree:true});
   });
+}else if(isCampaignDirectory){
+  // Crew Access is shared by admins and campaign users.
+  // Keep the full admin rail when the master admin already has a valid
+  // Google session; otherwise show the simple public crew directory nav.
+  const app=getApps().find(a=>a.name==='[DEFAULT]')||initializeApp(firebaseConfig);
+  const auth=getAuth(app);
+  let directoryAdmin=false;
+
+  const applyDirectoryNav=()=>{
+    if(directoryAdmin)renderAdminNav('access');
+    else renderDirectoryNav();
+    styleInPageBackButtons();
+  };
+
+  onAuthStateChanged(auth,user=>{
+    directoryAdmin=Boolean(user&&user.uid===ADMIN_UID);
+    applyDirectoryNav();
+  });
+
+  applyDirectoryNav();
+  new MutationObserver(applyDirectoryNav).observe(document.body,{childList:true,subtree:true});
 }else{
   applyPublic();
   new MutationObserver(applyPublic).observe(document.body,{childList:true,subtree:true});

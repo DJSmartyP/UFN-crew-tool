@@ -16,5 +16,5 @@ if (params.has('archive')) {
   await import('./admin-separation.js');
 }
 
-await import('./navigation-polish.js?v=20260912-nav2');
+await import('./navigation-polish.js?v=20260912-nav3');
 await import('./short-crew-planner.js');
