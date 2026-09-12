@@ -13,7 +13,7 @@ if (params.has('archive')) {
   await import('./campaign-directory.js?v=20260912-patchplace1');
 } else {
   await import('./app.js');
-  await import('./admin-separation.js?v=20260912-patchplace1');
+  await import('./admin-separation.js?v=20260912-playerfreeze1');
 }
 
 await import('./navigation-polish.js?v=20260912-directdep1');

@@ -86,33 +86,43 @@ async function markCampaignPlayerPage(){
     const banner=document.querySelector('.deployment-visual-copy');
     if(banner){
       const span=banner.querySelector('span');
-      if(span)span.textContent=`CAMPAIGN CREW DEPLOYMENT · ${crewName}`;
+      const wanted=`CAMPAIGN CREW DEPLOYMENT · ${crewName}`;
+      if(span&&span.textContent!==wanted)span.textContent=wanted;
+
       const small=banner.querySelector('small');
-      if(small&&small.textContent.includes('·'))small.textContent=small.textContent.split('·')[0].trim();
+      if(small&&small.textContent.includes('·')){
+        const cleaned=small.textContent.split('·')[0].trim();
+        if(small.textContent!==cleaned)small.textContent=cleaned;
+      }
     }
 
     const factions=document.querySelector('.deployment-factions');
     if(factions&&patchUrl){
-      // Campaign identity belongs with the crew plan rather than floating in
-      // the deployment banner.
-      factions.innerHTML='';
-      factions.style.display='none';
+      // Only mutate this once. Re-clearing innerHTML on every observer pass
+      // caused a self-triggering render loop on campaign player pages.
+      if(factions.childElementCount)factions.replaceChildren();
+      if(factions.style.display!=='none')factions.style.display='none';
     }
 
     const planCard=document.querySelector('.roster-panel .ship-card')||document.querySelector('.station-grid .ship-card');
     if(planCard){
       let patch=planCard.querySelector('img.campaign-crew-plan-patch');
       if(patchUrl){
-        planCard.classList.add('has-campaign-plan-patch');
+        if(!planCard.classList.contains('has-campaign-plan-patch')){
+          planCard.classList.add('has-campaign-plan-patch');
+        }
         if(!patch){
           patch=document.createElement('img');
           patch.className='campaign-crew-plan-patch';
           planCard.appendChild(patch);
         }
         if(patch.getAttribute('src')!==patchUrl)patch.setAttribute('src',patchUrl);
-        patch.setAttribute('alt',`${crewName} patch`);
+        const alt=`${crewName} patch`;
+        if(patch.getAttribute('alt')!==alt)patch.setAttribute('alt',alt);
       }else{
-        planCard.classList.remove('has-campaign-plan-patch');
+        if(planCard.classList.contains('has-campaign-plan-patch')){
+          planCard.classList.remove('has-campaign-plan-patch');
+        }
         patch?.remove();
       }
     }
@@ -128,12 +138,25 @@ async function markCampaignPlayerPage(){
     document.querySelectorAll('.rules .rule').forEach(rule=>{
       if(/Two-ship games/i.test(rule.textContent||''))rule.remove();
     });
-    document.querySelectorAll('.ship-title').forEach(el=>{el.textContent=crewName;});
+
+    document.querySelectorAll('.ship-title').forEach(el=>{
+      if(el.textContent!==crewName)el.textContent=crewName;
+    });
+  };
+
+  let applyPending=false;
+  const scheduleApply=()=>{
+    if(applyPending)return;
+    applyPending=true;
+    requestAnimationFrame(()=>{
+      applyPending=false;
+      apply();
+    });
   };
 
   apply();
   const main=document.querySelector('#main');
-  if(main)new MutationObserver(apply).observe(main,{childList:true,subtree:true});
+  if(main)new MutationObserver(scheduleApply).observe(main,{childList:true,subtree:true});
 }
 
 if(deploymentId)markCampaignPlayerPage().catch(console.error);

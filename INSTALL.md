@@ -1,29 +1,22 @@
-# Campaign patch placement + Crew Access card alignment
+# Emergency player-page freeze fix
 
 Replace:
-- router.js
-- campaign-directory.js
 - admin-separation.js
-- campaign-polish.js
-- patch-lightbox.js
+- router.js
 
-Add:
-- campaign-card-alignment.css
+Root cause:
+- The campaign player-page observer watched #main.
+- Its apply() function then changed #main every time it ran:
+  - deployment-factions.innerHTML was cleared unconditionally
+  - ship-title.textContent was assigned unconditionally
+- Those DOM writes triggered the observer again, creating a continuous loop.
 
-What changes:
-1. Crew Access directory cards
-   - Every card now has the same fixed text-and-patch layout.
-   - A reserved patch slot exists even when a crew has no patch.
-   - Crew label, name, description and button therefore line up across every card.
-   - No patch can push the text down.
-
-2. Crew plan patch placement
-   - For campaign deployments, the crew patch moves to the bottom-right of the actual crew plan.
-   - The plan reserves space below the six station rows so the patch never covers a station.
-   - The patch is used on player crew plans and campaign management crew plans where available.
-   - The campaign player banner no longer duplicates the patch.
-
-3. Patch lightbox
-   - The bottom-right crew-plan patch remains clickable and expands using the existing large patch view.
+Fix:
+- Every DOM mutation is now conditional and only happens if something actually needs changing.
+- The observer callback is throttled through requestAnimationFrame.
+- Campaign patch still appears bottom-right on the crew plan.
+- Campaign crew name still replaces the generic ship title.
+- Two-ship campaign wording is still removed.
+- The router has a new cache-bust so the looping module is not served from cache.
 
 No Firebase/Auth/Firestore/rules changes are required.
