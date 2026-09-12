@@ -108,7 +108,30 @@ async function renderCampaignAdmin(){
   }
 }
 function renderCrewCard(c){
-  return `<details class="panel campaign-card campaign-crew-accordion" data-crew-card="${esc(c.id)}"><summary><div class="campaign-summary-main"><div><div class="eyebrow">Campaign crew</div><h2>${esc(c.name||c.id)}</h2></div><div class="campaign-summary-meta"><span class="pill ${c.active===false?'closed':'open'}">${c.active===false?'Disabled':'Active'}</span><span class="pill">Password v${Number(c.passwordVersion||1)}</span><span class="campaign-chevron">⌄</span></div></div></summary><div class="campaign-accordion-body"><div class="actions campaign-admin-actions"><a class="btn primary" href="${location.pathname}?campaigns=1&adminCrew=${encodeURIComponent(c.id)}">Open admin hub</a><button class="btn ghost" data-reset-password="${esc(c.id)}">Set new password</button><button class="btn ${c.active===false?'success':'danger'}" data-toggle-crew="${esc(c.id)}">${c.active===false?'Enable':'Disable'}</button></div><div class="campaign-divider"></div><div class="panel-heading-actions"><div><div class="eyebrow">Campaign Crew Deployments</div><h3>Deployments</h3></div></div><div class="campaign-deployment-grid" data-crew-deployments="${esc(c.id)}"><section class="loading-card"><p>Open this crew to load deployments…</p></section></div></div></details>`;
+  return `<section class="panel campaign-card campaign-admin-crew-card" data-crew-card="${esc(c.id)}">
+    <div class="campaign-summary-main">
+      <div>
+        <div class="eyebrow">Campaign crew</div>
+        <h2>${esc(c.name||c.id)}</h2>
+      </div>
+      <div class="campaign-summary-meta">
+        <span class="pill ${c.active===false?'closed':'open'}">${c.active===false?'Disabled':'Active'}</span>
+        <span class="pill">Password v${Number(c.passwordVersion||1)}</span>
+      </div>
+    </div>
+    <div class="actions campaign-admin-actions">
+      <a class="btn primary" href="${location.pathname}?campaigns=1&adminCrew=${encodeURIComponent(c.id)}">Open admin hub</a>
+      <button class="btn ghost" data-reset-password="${esc(c.id)}">Set new password</button>
+      <button class="btn ${c.active===false?'success':'danger'}" data-toggle-crew="${esc(c.id)}">${c.active===false?'Enable':'Disable'}</button>
+    </div>
+    <div class="campaign-divider"></div>
+    <div class="panel-heading-actions">
+      <div><div class="eyebrow">Campaign Crew Deployments</div><h3>Deployments</h3></div>
+    </div>
+    <div class="campaign-deployment-grid" data-crew-deployments="${esc(c.id)}">
+      <section class="loading-card"><p>Loading deployments…</p></section>
+    </div>
+  </section>`;
 }
 function bindCrewCard(c){
   const card=document.querySelector(`[data-crew-card="${CSS.escape(c.id)}"]`);
@@ -121,7 +144,9 @@ function bindCrewCard(c){
     await syncPublicDirectory({...c,active:next});
     renderCampaignAdmin();
   });
-  card?.addEventListener('toggle',()=>{if(card.open)loadCrewDeployments(c);});
+  // Deployments are always visible on the master admin Campaign Crews page.
+  // Do not hide them behind an accordion/dropdown.
+  loadCrewDeployments(c);
 }
 async function loadCrewDeployments(c){
   const box=document.querySelector(`[data-crew-deployments="${CSS.escape(c.id)}"]`);
@@ -131,7 +156,24 @@ async function loadCrewDeployments(c){
   try{
     const snap=await getDocs(query(collection(db,'ufnDeployments'),where('campaignCrew','==',c.id)));
     const ds=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
-    box.innerHTML=ds.length?ds.map(d=>`<section class="panel mission-card campaign-deployment-card"><div class="campaign-card-badges"><span class="pill campaign-type">Campaign Crew Deployment</span></div><div class="mission-date">${esc(dateText(d.date))}</div><h3>${esc(d.title||'UFN Deployment')}</h3><p class="sub">${esc(c.name)}</p><div class="mission-meta"><span class="pill ${d.closed?'closed':'open'}">${d.closed?'Choices closed':'Choices open'}</span><span class="pill">${Number(d.responseCount||0)}/6 responses</span></div><div class="share-box"><input readonly value="${esc(playerUrl(d.id))}"><button class="btn ghost tiny" data-admin-copy-player="${esc(d.id)}">Copy player link</button></div></section>`).join(''):`<section class="empty-state"><h3>No campaign deployments yet</h3><p>This crew can create deployments from its campaign hub.</p></section>`;
+    box.innerHTML=ds.length?ds.map(d=>`<section class="panel mission-card campaign-deployment-card" data-admin-deployment-card="${esc(d.id)}">
+      <div class="campaign-card-badges"><span class="pill campaign-type">Campaign Crew Deployment</span></div>
+      <div class="mission-date">${esc(dateText(d.date))}</div>
+      <h3>${esc(d.title||'UFN Deployment')}</h3>
+      <p class="sub">${esc(c.name)}</p>
+      <div class="mission-meta">
+        <span class="pill ${d.closed?'closed':'open'}">${d.closed?'Choices closed':'Choices open'}</span>
+        <span class="pill">${Number(d.responseCount||0)}/6 responses</span>
+      </div>
+      <div class="share-box">
+        <input readonly value="${esc(playerUrl(d.id))}">
+        <button class="btn ghost tiny" data-admin-copy-player="${esc(d.id)}">Copy player link</button>
+      </div>
+      <div class="actions admin-source-deployment-actions">
+        <a class="btn primary" href="${location.pathname}?campaigns=1&adminCrew=${encodeURIComponent(c.id)}&adminDeployment=${encodeURIComponent(d.id)}">Manage deployment</a>
+        <a class="btn ghost" href="${playerUrl(d.id)}" target="_blank" rel="noopener">Open player page</a>
+      </div>
+    </section>`).join(''):`<section class="empty-state"><h3>No campaign deployments yet</h3><p>Create one from the crew admin hub.</p></section>`;
     ds.forEach(d=>document.querySelector(`[data-admin-copy-player="${CSS.escape(d.id)}"]`)?.addEventListener('click',()=>navigator.clipboard.writeText(playerUrl(d.id))));
   }catch(err){
     box.innerHTML=`<section class="empty-state"><h3>Could not load deployments</h3><p>${esc(err.message)}</p></section>`;

@@ -163,11 +163,12 @@ function solveDirectCrew(players){
   });
   return{assignments,error:''};
 }
-function renderDirectRoster(players){
+function renderDirectRoster(players,patchUrl='',crewName='Campaign crew'){
   const plan=solveDirectCrew(players);
   const map=new Map(plan.assignments.map(a=>[a.role,a]));
   return `<div class="station-grid one admin-direct-roster">
-    <section class="ship-card">
+    <section class="ship-card${patchUrl?' campaign-plan-has-watermark':''}">
+      ${patchUrl?`<img class="campaign-plan-watermark" src="${esc(patchUrl)}" alt="" aria-hidden="true">`:''}
       <div class="ship-brand">
         <div class="ship-brand-copy">
           <div class="eyebrow">Campaign crew</div>
@@ -363,6 +364,101 @@ async function uploadAdminPatch(c,file,message){
 
 
 
+
+async function openAdminAddPlayer(slug,d){
+  const playersSnap=await getDocs(collection(db,'ufnDeployments',d.id,'players'));
+  if(playersSnap.size>=6){
+    alert('This deployment is full (6 crew).');
+    return;
+  }
+
+  const wrap=document.createElement('div');
+  wrap.className='modal-backdrop';
+  wrap.innerHTML=`<section class="modal panel">
+    <button class="btn ghost tiny modal-close" type="button">Close</button>
+    <div class="eyebrow">Admin player management</div>
+    <h2>Add player</h2>
+    <form id="adminDirectAddPlayerForm">
+      <div class="field"><label>Player name</label><input id="adnName" maxlength="60" required autofocus></div>
+      <div class="field"><label>1st station</label><select id="adn1">${roleOptions(FLEX)}</select></div>
+      <div class="field"><label>2nd station</label><select id="adn2">${roleOptions(FLEX)}</select></div>
+      <div class="field"><label>3rd station</label><select id="adn3">${roleOptions(FLEX)}</select></div>
+      <div class="label">Really don't want</div>
+      <div id="adnDislikes" class="checks">
+        ${DIRECT_ROLES.map(r=>`<label class="check"><input type="checkbox" value="${r.name}"><span>${r.name}</span></label>`).join('')}
+      </div>
+      <h3 style="margin-top:14px">Organiser lock</h3>
+      <div class="field"><label>Lock to station</label><select id="adnLockRole">${lockRoleOptions('')}</select></div>
+      <div class="actions"><button class="btn primary">Add player</button></div>
+      <div id="adnMessage" class="message"></div>
+    </form>
+  </section>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector('.modal-close').onclick=()=>wrap.remove();
+
+  wrap.querySelector('#adminDirectAddPlayerForm').onsubmit=async e=>{
+    e.preventDefault();
+    const payload={
+      name:wrap.querySelector('#adnName').value.trim(),
+      shipPref:'',
+      prefs:[
+        wrap.querySelector('#adn1').value,
+        wrap.querySelector('#adn2').value,
+        wrap.querySelector('#adn3').value
+      ],
+      dislikes:[...wrap.querySelectorAll('#adnDislikes input:checked')].map(x=>x.value),
+      source:'organiser',
+      updatedAt:serverTimestamp(),
+      createdAt:serverTimestamp()
+    };
+    const err=validateAdminPrefs(payload);
+    if(err){
+      wrap.querySelector('#adnMessage').textContent=err;
+      wrap.querySelector('#adnMessage').className='message error';
+      return;
+    }
+
+    try{
+      const depRef=doc(db,'ufnDeployments',d.id);
+      const playerRef=doc(collection(db,'ufnDeployments',d.id,'players'));
+      const claimRef=doc(db,'ufnDeployments',d.id,'nameClaims',claimId(payload.name));
+      const role=wrap.querySelector('#adnLockRole').value;
+
+      await runTransaction(db,async tx=>{
+        const [depSnap,claimSnap]=await Promise.all([tx.get(depRef),tx.get(claimRef)]);
+        if(!depSnap.exists())throw new Error('Deployment no longer exists.');
+        const depData=depSnap.data();
+        if(depData.campaignCrew!==slug)throw new Error('This deployment belongs to another campaign crew.');
+        if(Number(depData.responseCount||0)>=6)throw new Error('This deployment is full (6 crew).');
+        if(claimSnap.exists())throw new Error('That name is already registered for this deployment.');
+
+        const overrides={...(depData.overrides||{})};
+        if(role)overrides[playerRef.id]={shipId:'',role};
+
+        tx.set(playerRef,payload);
+        tx.set(claimRef,{
+          playerId:playerRef.id,
+          playerDocId:playerRef.id,
+          name:payload.name,
+          source:'admin',
+          updatedAt:serverTimestamp()
+        });
+        tx.update(depRef,{
+          responseCount:Number(depData.responseCount||0)+1,
+          overrides,
+          updatedAt:serverTimestamp()
+        });
+      });
+
+      wrap.remove();
+      await renderAdminDeploymentPage(slug,d.id);
+    }catch(ex){
+      wrap.querySelector('#adnMessage').textContent=ex.message;
+      wrap.querySelector('#adnMessage').className='message error';
+    }
+  };
+}
+
 async function openAdminPlayerEditor(slug,d,p){
   const currentOverride=d.overrides?.[p.id]||{};
   const prefs=Array.isArray(p.prefs)&&p.prefs.length===3?p.prefs:[FLEX,FLEX,FLEX];
@@ -541,7 +637,9 @@ async function renderAdminDeploymentPage(slug,deploymentId){
         </div>
       </div>
       <div class="campaign-dashboard-actions">
-        <button id="adminDirectEditDeployment" class="btn primary">Edit details</button>
+        <button id="adminDirectAddPlayer" class="btn primary">Add player</button>
+        <button id="adminDirectToggleChoices" class="btn ${d.closed?'success':'danger'}">${d.closed?'Open choices':'Close choices'}</button>
+        <button id="adminDirectEditDeployment" class="btn ghost">Edit deployment</button>
         <a class="btn ghost" href="${playerUrl(d.id)}" target="_blank" rel="noopener">Open player page</a>
         <button id="adminDirectArchiveDeployment" class="btn ghost">Archive</button>
       </div>
@@ -577,7 +675,7 @@ async function renderAdminDeploymentPage(slug,deploymentId){
         <div class="eyebrow">Live suggestion</div>
         <h2>Current crew plan</h2>
         <p class="sub">All six stations remain visible. Combined stations are shown for short crews.</p>
-        ${renderDirectRoster(ps)}
+        ${renderDirectRoster(ps,c.patchUrl||'',c.name||c.id)}
       </section>
     </div>
 
@@ -603,6 +701,19 @@ async function renderAdminDeploymentPage(slug,deploymentId){
           '<div class="empty-state"><h3>No responses yet</h3><p>Share the player response link to start collecting preferences.</p></div>'}
       </div>
     </section>`;
+
+  document.querySelector('#adminDirectAddPlayer')?.addEventListener('click',()=>openAdminAddPlayer(slug,d));
+  document.querySelector('#adminDirectToggleChoices')?.addEventListener('click',async()=>{
+    try{
+      await updateDoc(doc(db,'ufnDeployments',d.id),{
+        closed:!d.closed,
+        updatedAt:serverTimestamp()
+      });
+      await renderAdminDeploymentPage(slug,d.id);
+    }catch(err){
+      alert(`Could not update choices: ${err.message}`);
+    }
+  });
 
   document.querySelectorAll('[data-admin-edit-player]').forEach(btn=>{
     btn.onclick=()=>{

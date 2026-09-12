@@ -1,30 +1,46 @@
-# Restore player edit controls at admin level
+# Campaign Admin Parity Rebuild
 
 Replace:
+- campaign-admin.js
 - campaign-admin-polish.js
 - admin-direct-deployment.css
+- admin-separation.js
+- campaign-polish.js
 - router.js
 
-Campaign organiser level:
-- The existing campaign organiser deployment manager already retains:
-  - Add player
-  - Edit player
-  - Delete player
-  - station lock
-  - preference editing
+This is a consolidation patch, not another visual layer.
 
-Master admin direct deployment page:
-- Restores direct controls for every registered player:
-  - Edit player
-  - Edit 1st / 2nd / 3rd preferences
-  - Edit "Really don't want"
-  - Set / clear station lock
-  - Rename player with duplicate-name protection
-  - Delete player
-- Shows the current station lock directly in the response row.
-- Player deletion also removes their name claim, organiser override and decrements responseCount.
-- Saving stays on the direct deployment page.
+MASTER ADMIN RULE
+The master admin now gets organiser-level control over every campaign crew.
 
-This router is based on the latest player freeze/watermark chain so it does not regress those fixes.
+Campaign Crews page
+- Removes the pointless accordion/dropdown behaviour.
+- Each campaign crew is a normal section.
+- Its deployment cards load immediately and remain visible.
+- Every deployment card has direct Manage Deployment and Open Player Page access.
+- Existing copy-link, archive/edit enhancements remain compatible.
 
-No Firestore rules changes are required; master admin already has write/delete permission.
+Direct admin deployment page
+- Add player
+- Edit player
+- Delete player
+- Edit 1st/2nd/3rd preferences
+- Edit Really Don't Want
+- Set / clear station lock
+- Rename player with duplicate-name protection
+- Open / close player choices
+- Edit deployment
+- Open player page
+- Archive deployment
+
+Campaign organisers retain their existing equivalent player controls.
+
+WATERMARK FIX
+- Stops using the fragile CSS pseudo-watermark override.
+- An uploaded campaign patch is inserted as a real faded watermark image layer inside the crew-plan card.
+- The default UFN ::after watermark is completely suppressed whenever a campaign patch exists.
+- No separate bottom-right patch is shown in crew plans.
+- Works on player campaign plans, campaign organiser plans, and master-admin direct plans.
+- Title-bar patch remains.
+
+No Firebase/Auth/Firestore/rules changes are required.

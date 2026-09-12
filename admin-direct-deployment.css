@@ -94,3 +94,69 @@
     width:100%;
   }
 }
+
+/* ================================================================
+   Campaign admin parity rebuild
+   ================================================================ */
+.campaign-admin-crew-card{
+  display:block;
+  padding:18px 20px 20px;
+}
+.campaign-admin-crew-card .campaign-deployment-grid{
+  margin-top:12px;
+}
+.admin-source-deployment-actions{
+  margin-top:auto;
+  flex-wrap:wrap;
+}
+
+/* Direct admin page: organiser-equivalent controls are always visible. */
+.admin-direct-player-actions .btn{
+  white-space:nowrap;
+}
+
+/* Reliable campaign patch watermark.
+   Use a real image layer and suppress the default UFN pseudo watermark. */
+.ship-card.campaign-plan-has-watermark{
+  position:relative;
+  isolation:isolate;
+}
+.ship-card.campaign-plan-has-watermark::after{
+  display:none!important;
+  content:none!important;
+}
+.campaign-plan-watermark{
+  position:absolute;
+  right:-42px;
+  bottom:-54px;
+  width:220px;
+  height:220px;
+  object-fit:contain;
+  opacity:.065;
+  pointer-events:none;
+  z-index:0;
+  filter:none;
+}
+.ship-card.campaign-plan-has-watermark .ship-brand,
+.ship-card.campaign-plan-has-watermark .short-crew-summary,
+.ship-card.campaign-plan-has-watermark .station{
+  position:relative;
+  z-index:1;
+}
+
+/* Never show the obsolete bottom-right explicit campaign patch in a crew plan. */
+.station-grid .campaign-crew-plan-patch{
+  display:none!important;
+}
+.station-grid .ship-card.has-campaign-plan-patch{
+  padding-bottom:0!important;
+}
+
+@media(max-width:700px){
+  .campaign-plan-watermark{
+    width:180px;
+    height:180px;
+    right:-34px;
+    bottom:-44px;
+  }
+}

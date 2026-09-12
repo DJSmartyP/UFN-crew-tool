@@ -94,6 +94,31 @@ function setPatchVisual(container,url,alt){
   }
 }
 
+
+function applyCrewPlanWatermark(){
+  const url=crew?.patchUrl||'';
+  document.querySelectorAll('.station-grid .ship-card').forEach(card=>{
+    card.querySelectorAll('.campaign-crew-plan-patch').forEach(img=>img.remove());
+    card.classList.remove('has-campaign-plan-patch','campaign-watermark-card');
+
+    let wm=card.querySelector('.campaign-plan-watermark');
+    if(url){
+      card.classList.add('campaign-plan-has-watermark');
+      if(!wm){
+        wm=document.createElement('img');
+        wm.className='campaign-plan-watermark';
+        wm.alt='';
+        wm.setAttribute('aria-hidden','true');
+        card.prepend(wm);
+      }
+      if(wm.getAttribute('src')!==url)wm.setAttribute('src',url);
+    }else{
+      card.classList.remove('campaign-plan-has-watermark');
+      wm?.remove();
+    }
+  });
+}
+
 function applyPatchVisuals(){
   const url=crew?.patchUrl||'';
 
@@ -103,23 +128,6 @@ function applyPatchVisuals(){
   // On the campaign crew hub the large page-level patch is the identity mark,
   // so do not duplicate it on every deployment tile.
   document.querySelectorAll('#deployments .campaign-deployment-card img.campaign-card-patch').forEach(img=>img.remove());
-
-  document.querySelectorAll('.station-grid .ship-card').forEach(card=>{
-    let patch=card.querySelector('img.campaign-crew-plan-patch');
-    if(url){
-      card.classList.add('has-campaign-plan-patch');
-      if(!patch){
-        patch=document.createElement('img');
-        patch.className='campaign-crew-plan-patch';
-        card.appendChild(patch);
-      }
-      if(patch.getAttribute('src')!==url)patch.setAttribute('src',url);
-      patch.setAttribute('alt',`${crew?.name||'Campaign crew'} patch`);
-    }else{
-      card.classList.remove('has-campaign-plan-patch');
-      patch?.remove();
-    }
-  });
 
   const head=document.querySelector('.campaign-dashboard-head');
   if(head){
@@ -218,6 +226,7 @@ async function refreshCrew(){
   const snap=await getDoc(doc(db,'ufnCampaignCrews',crewSlug));
   if(snap.exists())crew={id:snap.id,...snap.data()};
   applyPatchVisuals();
+  applyCrewPlanWatermark();
 }
 
 function renderPatchSettings(){
