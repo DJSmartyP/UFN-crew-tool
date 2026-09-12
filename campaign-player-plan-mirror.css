@@ -1,0 +1,47 @@
+/* Campaign player crew plan mirrors organiser layout */
+.player-layout .roster-panel .campaign-player-plan-mirror{
+  width:100%;
+  max-width:none;
+}
+
+.player-layout .roster-panel .campaign-player-plan-mirror .ship-brand{
+  grid-template-columns:minmax(0,1fr) auto;
+  min-height:106px;
+}
+
+.player-layout .roster-panel .campaign-player-plan-mirror .ship-brand-copy{
+  padding-left:0;
+}
+
+/* Replace the built-in UFN watermark on campaign crew plans.
+   Geometry remains deliberately similar to the existing organiser watermark. */
+.ship-card.campaign-watermark-card::after{
+  background-image:var(--campaign-watermark-image)!important;
+  background-position:center!important;
+  background-size:contain!important;
+  background-repeat:no-repeat!important;
+  opacity:.065!important;
+  border-radius:0!important;
+}
+
+/* Ensure station rows and short-crew notices sit above the watermark. */
+.ship-card.campaign-watermark-card .ship-brand,
+.ship-card.campaign-watermark-card .short-crew-summary,
+.ship-card.campaign-watermark-card .station{
+  position:relative;
+  z-index:1;
+}
+
+/* Keep the uploaded patch as the explicit bottom-right crew identity badge too. */
+.ship-card.campaign-player-plan-mirror.has-campaign-plan-patch{
+  padding-bottom:96px;
+}
+
+@media(max-width:700px){
+  .player-layout .roster-panel .campaign-player-plan-mirror .ship-brand{
+    min-height:86px;
+  }
+  .ship-card.campaign-player-plan-mirror.has-campaign-plan-patch{
+    padding-bottom:84px;
+  }
+}

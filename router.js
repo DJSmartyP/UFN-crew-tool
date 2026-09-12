@@ -13,7 +13,7 @@ if (params.has('archive')) {
   await import('./campaign-directory.js?v=20260912-patchplace1');
 } else {
   await import('./app.js');
-  await import('./admin-separation.js?v=20260912-titlepatch1');
+  await import('./admin-separation.js?v=20260912-planmirror1');
 }
 
 await import('./navigation-polish.js?v=20260912-directdep1');
@@ -52,5 +52,13 @@ if (!document.querySelector('link[data-campaign-card-alignment-css]')) {
   link.rel='stylesheet';
   link.href='./campaign-card-alignment.css?v=20260912-patchplace1';
   link.dataset.campaignCardAlignmentCss='1';
+  document.head.appendChild(link);
+}
+
+if (params.has('m') && !document.querySelector('link[data-campaign-player-plan-mirror-css]')) {
+  const link=document.createElement('link');
+  link.rel='stylesheet';
+  link.href='./campaign-player-plan-mirror.css?v=20260912-planmirror1';
+  link.dataset.campaignPlayerPlanMirrorCss='1';
   document.head.appendChild(link);
 }

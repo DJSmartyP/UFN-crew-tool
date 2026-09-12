@@ -118,13 +118,58 @@ async function markCampaignPlayerPage(){
       }
     }
 
+    const rosterPanel=document.querySelector('.roster-panel');
+    if(rosterPanel){
+      const panelEyebrow=rosterPanel.querySelector(':scope > .eyebrow');
+      if(panelEyebrow&&panelEyebrow.textContent!=='Live suggestion')panelEyebrow.textContent='Live suggestion';
+
+      const panelTitle=rosterPanel.querySelector(':scope > h2');
+      if(panelTitle&&panelTitle.textContent!=='Current crew plan')panelTitle.textContent='Current crew plan';
+
+      const panelSub=rosterPanel.querySelector(':scope > .sub');
+      const wantedSub='All six stations remain visible. Combined stations are shown for short crews.';
+      if(panelSub&&panelSub.textContent!==wantedSub)panelSub.textContent=wantedSub;
+    }
+
     const planCard=document.querySelector('.roster-panel .ship-card')||document.querySelector('.station-grid .ship-card');
     if(planCard){
+      if(!planCard.classList.contains('campaign-player-plan-mirror')){
+        planCard.classList.add('campaign-player-plan-mirror');
+      }
+
+      // Mirror the organiser crew-plan header rather than the generic faction card.
+      const brand=planCard.querySelector('.ship-brand');
+      if(brand){
+        const badge=brand.querySelector('.faction-badge');
+        badge?.remove();
+
+        const brandCopy=brand.querySelector('.ship-brand-copy');
+        if(brandCopy){
+          const eyebrow=brandCopy.querySelector('.eyebrow');
+          if(eyebrow&&eyebrow.textContent!=='Campaign crew')eyebrow.textContent='Campaign crew';
+
+          const title=brandCopy.querySelector('.ship-title');
+          if(title&&title.textContent!=='Current crew plan')title.textContent='Current crew plan';
+
+          const strap=brandCopy.querySelector('.faction-strap');
+          if(strap&&strap.textContent!=='LIVE CREW VIEW')strap.textContent='LIVE CREW VIEW';
+        }
+      }
+
       let patch=planCard.querySelector('img.campaign-crew-plan-patch');
       if(patchUrl){
         if(!planCard.classList.contains('has-campaign-plan-patch')){
           planCard.classList.add('has-campaign-plan-patch');
         }
+        if(!planCard.classList.contains('campaign-watermark-card')){
+          planCard.classList.add('campaign-watermark-card');
+        }
+
+        const watermarkValue=`url("${patchUrl.replace(/"/g,'%22')}")`;
+        if(planCard.style.getPropertyValue('--campaign-watermark-image')!==watermarkValue){
+          planCard.style.setProperty('--campaign-watermark-image',watermarkValue);
+        }
+
         if(!patch){
           patch=document.createElement('img');
           patch.className='campaign-crew-plan-patch';
@@ -136,6 +181,12 @@ async function markCampaignPlayerPage(){
       }else{
         if(planCard.classList.contains('has-campaign-plan-patch')){
           planCard.classList.remove('has-campaign-plan-patch');
+        }
+        if(planCard.classList.contains('campaign-watermark-card')){
+          planCard.classList.remove('campaign-watermark-card');
+        }
+        if(planCard.style.getPropertyValue('--campaign-watermark-image')){
+          planCard.style.removeProperty('--campaign-watermark-image');
         }
         patch?.remove();
       }
