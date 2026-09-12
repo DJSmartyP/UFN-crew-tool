@@ -97,11 +97,25 @@ async function markCampaignPlayerPage(){
     }
 
     const factions=document.querySelector('.deployment-factions');
-    if(factions&&patchUrl){
-      // Only mutate this once. Re-clearing innerHTML on every observer pass
-      // caused a self-triggering render loop on campaign player pages.
-      if(factions.childElementCount)factions.replaceChildren();
-      if(factions.style.display!=='none')factions.style.display='none';
+    if(factions){
+      if(patchUrl){
+        // Campaign player title bar should mirror the organiser treatment:
+        // show the crew patch here as well as on the crew plan.
+        if(factions.style.display==='none')factions.style.display='';
+        let titlePatch=factions.querySelector('img.campaign-player-patch');
+        if(!titlePatch || factions.children.length!==1){
+          factions.replaceChildren();
+          titlePatch=document.createElement('img');
+          titlePatch.className='campaign-player-patch';
+          factions.appendChild(titlePatch);
+        }
+        if(titlePatch.getAttribute('src')!==patchUrl)titlePatch.setAttribute('src',patchUrl);
+        const alt=`${crewName} patch`;
+        if(titlePatch.getAttribute('alt')!==alt)titlePatch.setAttribute('alt',alt);
+      }else{
+        // No uploaded patch: leave the base UFN title-bar treatment alone.
+        if(factions.style.display==='none')factions.style.display='';
+      }
     }
 
     const planCard=document.querySelector('.roster-panel .ship-card')||document.querySelector('.station-grid .ship-card');
