@@ -1,0 +1,60 @@
+/* Shared campaign crew-plan watermark.
+   Used identically by player, organiser and master-admin views. */
+
+.ship-card.campaign-plan-has-watermark{
+  position:relative!important;
+  isolation:isolate;
+}
+
+/* Suppress the default UFN/ghost pseudo watermark whenever a campaign patch exists. */
+.ship-card.campaign-plan-has-watermark::after{
+  content:none!important;
+  display:none!important;
+  background:none!important;
+}
+
+/* The crew patch itself is a real faded watermark layer. */
+.ship-card.campaign-plan-has-watermark > .campaign-plan-watermark{
+  position:absolute!important;
+  right:-42px!important;
+  bottom:-54px!important;
+  width:220px!important;
+  height:220px!important;
+  max-width:none!important;
+  max-height:none!important;
+  object-fit:contain!important;
+  opacity:.065!important;
+  pointer-events:none!important;
+  z-index:0!important;
+  border:0!important;
+  border-radius:0!important;
+  padding:0!important;
+  margin:0!important;
+  background:transparent!important;
+  filter:none!important;
+}
+
+/* Actual content always sits above the watermark. */
+.ship-card.campaign-plan-has-watermark > .ship-brand,
+.ship-card.campaign-plan-has-watermark > .short-crew-summary,
+.ship-card.campaign-plan-has-watermark > .station{
+  position:relative!important;
+  z-index:1!important;
+}
+
+/* Never show the obsolete explicit bottom-right patch badge. */
+.station-grid .campaign-crew-plan-patch{
+  display:none!important;
+}
+.station-grid .ship-card.has-campaign-plan-patch{
+  padding-bottom:0!important;
+}
+
+@media(max-width:700px){
+  .ship-card.campaign-plan-has-watermark > .campaign-plan-watermark{
+    width:180px!important;
+    height:180px!important;
+    right:-34px!important;
+    bottom:-44px!important;
+  }
+}

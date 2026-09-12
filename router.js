@@ -4,16 +4,16 @@ if (params.has('archive')) {
   await import('./archive-admin.js');
 } else if (params.has('crew')) {
   await import('./campaign.js');
-  await import('./campaign-polish.js?v=20260912-adminparity1');
+  await import('./campaign-polish.js?v=20260912-sharedwm1');
 } else if (params.has('campaigns')) {
   await import('./campaign-admin.js?v=20260912-adminparity1');
-  await import('./campaign-admin-polish.js?v=20260912-adminparity1');
+  await import('./campaign-admin-polish.js?v=20260912-sharedwm1');
   await import('./campaign-admin-create.js?v=20260912-directrepair1');
 } else if (params.has('campaign')) {
   await import('./campaign-directory.js?v=20260912-patchplace1');
 } else {
   await import('./app.js');
-  await import('./admin-separation.js?v=20260912-adminparity1');
+  await import('./admin-separation.js?v=20260912-sharedwm1');
 }
 
 await import('./navigation-polish.js?v=20260912-directdep1');
@@ -63,3 +63,11 @@ if (params.has('m') && !document.querySelector('link[data-campaign-player-plan-m
   document.head.appendChild(link);
 }
 
+
+if (!document.querySelector('link[data-campaign-plan-watermark-css]')) {
+  const link=document.createElement('link');
+  link.rel='stylesheet';
+  link.href='./campaign-plan-watermark.css?v=20260912-sharedwm1';
+  link.dataset.campaignPlanWatermarkCss='1';
+  document.head.appendChild(link);
+}
