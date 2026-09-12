@@ -22,6 +22,10 @@ file; deploying rules copied from only one application will remove permissions
 needed by the other. Run `node --test shared-firestore-rules.test.cjs` before
 publishing rules.
 
+The campaign administration enhancement reuses the deployment action row from
+the base screen. This prevents duplicate Manage deployment and Open player page
+buttons when both UI layers are active.
+
 ## GitHub Pages
 
 Upload the contents of this folder to the root of a GitHub repository and enable GitHub Pages from the `main` branch.

@@ -259,14 +259,17 @@ function enhanceCampaignAdminList(){
 
       let actions=depCard.querySelector('.admin-direct-deployment-actions');
       if(!actions){
-        actions=document.createElement('div');
-        actions.className='actions admin-direct-deployment-actions';
+        // The base campaign-admin view already renders a management action row.
+        // Reuse it so the enhancement layer does not append a second set of
+        // Manage/Open buttons to every deployment card.
+        actions=depCard.querySelector('.admin-source-deployment-actions')||document.createElement('div');
+        actions.classList.add('actions','admin-direct-deployment-actions');
         actions.innerHTML=`
           <a class="btn primary" data-admin-direct-manage href="${adminDeploymentUrl(id,depId)}">Manage deployment</a>
           <button class="btn ghost" data-admin-direct-edit type="button">Edit details</button>
           <a class="btn ghost" data-admin-player-page href="${playerUrl(depId)}" target="_blank" rel="noopener">Open player page</a>
           <button class="btn ghost" data-admin-direct-archive type="button">Archive</button>`;
-        depCard.appendChild(actions);
+        if(!actions.isConnected)depCard.appendChild(actions);
       }
 
       actions.querySelector('[data-admin-direct-edit]')?.addEventListener('click',async e=>{

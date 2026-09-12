@@ -7,7 +7,7 @@ if (params.has('archive')) {
   await import('./campaign-polish.js?v=20260912-sharedwm1');
 } else if (params.has('campaigns')) {
   await import('./campaign-admin.js?v=20260912-adminparity1');
-  await import('./campaign-admin-polish.js?v=20260912-sharedwm1');
+  await import('./campaign-admin-polish.js?v=20260912-dedup1');
   await import('./campaign-admin-create.js?v=20260912-directrepair1');
 } else if (params.has('campaign')) {
   await import('./campaign-directory.js?v=20260912-patchplace1');
