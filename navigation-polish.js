@@ -92,7 +92,7 @@ function renderAdminNav(active){
   if(!topActions)return;
   topActions.classList.add('e-nav-host');
   const markup=`<div class="e-nav-shell">${adminPrimary(active)}${adminContext()}</div>`;
-  if(topActions.dataset.elegantMarkup!==markup){
+  if(topActions.dataset.elegantMarkup!==markup || !topActions.querySelector(':scope > .e-nav-shell')){
     topActions.innerHTML=markup;
     topActions.dataset.elegantMarkup=markup;
   }
@@ -163,7 +163,7 @@ function renderCampaignHubNav(){
   }
 
   const markup=`<div class="e-nav-shell">${primary}${context}</div>`;
-  if(topActions.dataset.elegantMarkup!==markup){
+  if(topActions.dataset.elegantMarkup!==markup || !topActions.querySelector(':scope > .e-nav-shell')){
     topActions.innerHTML=markup;
     topActions.dataset.elegantMarkup=markup;
   }
@@ -191,7 +191,7 @@ function renderDirectoryNav(){
       </nav>
     </div>
   </div>`;
-  if(topActions.dataset.elegantMarkup!==markup){
+  if(topActions.dataset.elegantMarkup!==markup || !topActions.querySelector(':scope > .e-nav-shell')){
     topActions.innerHTML=markup;
     topActions.dataset.elegantMarkup=markup;
   }
@@ -233,7 +233,7 @@ function renderPlayerNav(){
   </div>`:'';
 
   const markup=`<div class="e-nav-shell">${primary}${context}</div>`;
-  if(topActions.dataset.elegantMarkup!==markup){
+  if(topActions.dataset.elegantMarkup!==markup || !topActions.querySelector(':scope > .e-nav-shell')){
     topActions.innerHTML=markup;
     topActions.dataset.elegantMarkup=markup;
   }
